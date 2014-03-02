@@ -34,12 +34,10 @@ import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
-import com.gearworks.characters.BaseCharacter;
 import com.gearworks.levels.Level;
 import com.gearworks.physics.ContactHandler;
 import com.gearworks.physics.Entity;
 
-//This comment is a result of a branch test! 
 public class Game implements ApplicationListener{
 	static final float WORLD_TO_BOX = 0.01f;
 	static final float BOX_TO_WORLD = 100f;
@@ -50,7 +48,6 @@ public class Game implements ApplicationListener{
     public ShapeRenderer shapeRenderer;
     public AssetManager assetManager; 
     public Level level;
-    public BaseCharacter testChar;
     public World world;
     public InputHandler inputHandler;
     public ArrayList<Entity> entities;
@@ -59,7 +56,7 @@ public class Game implements ApplicationListener{
 
 	public static void main(String[] args) {
 		LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
-		cfg.title = "Tower Defender";
+		cfg.title = "Eugene";
 		cfg.width = 800;
 		cfg.height = 480;
 		LwjglApplication t = new LwjglApplication(new Game(), cfg);
@@ -92,10 +89,6 @@ public class Game implements ApplicationListener{
         level.instantiate();
         level.setPosition(0, 0);
         addEntity(level);
-        
-        testChar = new BaseCharacter(level, world);
-        testChar.instantiate();
-        addEntity(testChar);
 	}
 	
 	public void addEntity(Entity ent){
@@ -116,15 +109,16 @@ public class Game implements ApplicationListener{
 				
 	}
 	
+	//This is bad
 	public void processInput(){
 		if(inputHandler.isAction(KeyMapper.Action.Jump)){
-			testChar.doJump();
+			//testChar.doJump();
 		}
 		
 		if(inputHandler.isAction(KeyMapper.Action.MoveLeft)){
-			testChar.doLeft();
+			//testChar.doLeft();
 		}else if(inputHandler.isAction(KeyMapper.Action.MoveRight)){
-			testChar.doRight();
+			//testChar.doRight();
 		}
 	}
 
@@ -133,9 +127,9 @@ public class Game implements ApplicationListener{
 		processInput();
 		
 		//Update the camera
-		Vector3 pos = new Vector3();
-		pos = testChar.getInstance().transform.getTranslation(pos);
-		cam.position.set(pos.x, pos.y+5f, pos.z + 20f);
+		//Vector3 pos = new Vector3();
+		//pos = testChar.getInstance().transform.getTranslation(pos);
+		//cam.position.set(pos.x, pos.y+5f, pos.z + 20f);
 		cam.update();
 		
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
