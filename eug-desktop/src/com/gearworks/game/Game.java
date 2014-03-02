@@ -34,9 +34,9 @@ import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
-import com.gearworks.levels.Level;
-import com.gearworks.physics.ContactHandler;
-import com.gearworks.physics.Entity;
+//import com.gearworks.levels.Level;
+//import com.gearworks.physics.ContactHandler;
+//import com.gearworks.physics.Entity;
 
 public class Game implements ApplicationListener{
 	static final float WORLD_TO_BOX = 0.01f;
@@ -47,12 +47,12 @@ public class Game implements ApplicationListener{
     public CameraInputController camController;
     public ShapeRenderer shapeRenderer;
     public AssetManager assetManager; 
-    public Level level;
+    //public Level level;
     public World world;
     public InputHandler inputHandler;
-    public ArrayList<Entity> entities;
+    //public ArrayList<Entity> entities;
     Box2DDebugRenderer debugRenderer;
-	public ContactHandler contactHandler;
+	//public ContactHandler contactHandler;
 
 	public static void main(String[] args) {
 		LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
@@ -65,9 +65,9 @@ public class Game implements ApplicationListener{
 	@Override
 	public void create() {
 		inputHandler = new InputHandler();
-		contactHandler = new ContactHandler();
+		//contactHandler = new ContactHandler();
 		world = new World(new Vector2(0, -10), true);
-		world.setContactListener(contactHandler);
+		//world.setContactListener(contactHandler);
 		debugRenderer = new Box2DDebugRenderer();
 		assetManager = new AssetManager();
 		shapeRenderer = new ShapeRenderer();
@@ -83,26 +83,26 @@ public class Game implements ApplicationListener{
         cam.update();		
         camController = new CameraInputController(cam);
         Gdx.input.setInputProcessor(inputHandler);
-        entities = new ArrayList<Entity>();
+       // entities = new ArrayList<Entity>();
         
-        level = new Level(world);
-        level.instantiate();
-        level.setPosition(0, 0);
-        addEntity(level);
+        //level = new Level(world);
+        //level.instantiate();
+        //level.setPosition(0, 0);
+        //addEntity(level);
 	}
 	
-	public void addEntity(Entity ent){
+	/*public void addEntity(Entity ent){
 		if(!ent.isInstatiated())
 			ent.instantiate();
 		entities.add(ent);
 		contactHandler.addListener(ent);
-	}
+	}*/
 	
-	public void removeEntity(Entity ent){
+	/*public void removeEntity(Entity ent){
 		contactHandler.removeListener(ent);
 		ent.dispose();
 		entities.remove(ent);		
-	}
+	}*/
 
 	@Override
 	public void resize(int width, int height) {
@@ -137,10 +137,10 @@ public class Game implements ApplicationListener{
 		
 		modelBatch.begin(cam);
 		
-		for(Entity e : entities){
-			e.update();
-			modelBatch.render(e.getInstance(), environment);
-		}
+		//for(Entity e : entities){
+		//	e.update();
+		//	modelBatch.render(e.getInstance(), environment);
+		//}
 		
 		modelBatch.end();
 		
@@ -164,7 +164,7 @@ public class Game implements ApplicationListener{
 	@Override
 	public void dispose() {
 		modelBatch.dispose();
-		level.dispose();		
+		//level.dispose();		
 		world.dispose();
 	}
 
