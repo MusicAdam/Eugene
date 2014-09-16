@@ -150,5 +150,9 @@ public class Utils {
 	public static float[] colorToArray(Color c){
 		return new float[]{c.r, c.g, c.b, c.a};
 	}
+	
+	public static long generateTimeStamp(){
+		return System.currentTimeMillis();
+	}
 
 }

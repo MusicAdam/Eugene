@@ -29,6 +29,7 @@ public class StateManager {
 	}
 	
 	public boolean setState(State toState){
+		if(toState == null) return false;
 		//Don't change states if they are the same
 		if(statesEqual(state, toState)) return false;
 		

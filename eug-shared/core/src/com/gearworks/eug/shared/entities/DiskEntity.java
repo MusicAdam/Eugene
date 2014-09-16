@@ -1,4 +1,4 @@
-package com.gearworks.eug.client.entities;
+package com.gearworks.eug.shared.entities;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -14,18 +14,19 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
-import com.gearworks.eug.client.ClientPlayer;
-import com.gearworks.eug.client.Eug;
+import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.Eug;
+import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
 
-public class Disk extends ClientEntity {
-	private ClientPlayer owner;
+public class DiskEntity extends Entity {
+	private Player owner;
 	
 	private float impulseDelay			= .5f; //Delay between impulses in seconds;
 	private float timeSinceLastImpulse 	= impulseDelay; //Initialize with the delay so that an impulse can be applied immediately.
 	private Vector2 impulseDirection	= null;		//Impulse is applied in this direction when this is not null (requried to sync IO & box2d)
 	private float impulseMagnitude		= .2f;	//Magnitude of the impulse
-	private float drag					= 10f;
+	private float drag					= 10000f;
 	private float turnDelay				= .5f; //Delay between turns in seconds
 	private float timeSinceLastTurn		= turnDelay; 
 	private Vector2 turnToDirection		= null;
@@ -44,8 +45,8 @@ public class Disk extends ClientEntity {
 	private float baseDamageMod			= 20; //Multiplies base damage
 	
 	
-	public Disk(ClientPlayer owner) {		
-		this.owner = owner;
+	public DiskEntity(int id, Player owner) {		
+		super(id, owner);
 		selectable(true);
 	}
 	
@@ -100,12 +101,12 @@ public class Disk extends ClientEntity {
 	}
 	
 	public void turnTo(Vector2 dir){
-		if(!canTurnTo()) return;
+		if(!canDoTurn()) return;
 		
 		turnToDirection = dir;
 	}
 	
-	public boolean canTurnTo(){
+	public boolean canDoTurn(){
 		return (timeSinceLastTurn >= turnDelay);
 	}
 	
@@ -120,8 +121,8 @@ public class Disk extends ClientEntity {
 		bodyDef.position.set(100 * SharedVars.WORLD_TO_BOX, 100 * SharedVars.WORLD_TO_BOX);
 		
 		//Create body
-		body = Eug.GetWorld().createBody(bodyDef);
-		body.setAngularDamping(angularDamping);
+		body(Eug.GetWorld().createBody(bodyDef));
+		body().setAngularDamping(angularDamping); //TODO: ON server, spawning needs a 'begin' and 'end' clause which sets the current instance to which spawning is happening
 		//Create Fixture
 		CircleShape unitShape = new CircleShape();
 		unitShape.setRadius((sprite.getWidth()/2) * SharedVars.WORLD_TO_BOX );
@@ -132,12 +133,10 @@ public class Disk extends ClientEntity {
 		fix.friction = 0.1f;
 		fix.restitution = 0.0f;
 		
-		Fixture fixture = body.createFixture(fix);
+		Fixture fixture = body().createFixture(fix);
 		fixture.setUserData(this);
 		
 		unitShape.dispose();
-		
-		bodyIsDirty = true;
 	}
 	
 	//This function only checks the angle of the point relative to the position of the body. It does not check that the point is contained within a bodies' fixture

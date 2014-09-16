@@ -2,7 +2,7 @@ package com.gearworks.eug.client.state;
 
 import java.io.IOException;
 
-import com.gearworks.eug.client.Eug;
+import com.gearworks.eug.client.EugClient;
 import com.gearworks.eug.shared.Debug;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.state.State;
@@ -23,11 +23,11 @@ public class ConnectState implements State {
 
 	@Override
 	public void update() {
-		if(attempts < maxAttempts){			
+		if(attempts < maxAttempts && !EugClient.GetClient().isConnected()){			
 			//Initialize client
 			try {
 				Debug.print("\t");
-				Eug.GetClient().connect(5000, "localhost", SharedVars.TCP_PORT, SharedVars.UDP_PORT);
+				EugClient.GetClient().connect(5000, "localhost", SharedVars.TCP_PORT, SharedVars.UDP_PORT);
 			} catch (IOException e) {
 				Debug.print("\t");
 				Debug.println(e.getMessage());
@@ -38,7 +38,7 @@ public class ConnectState implements State {
 			done = true;
 		}
 		
-		Eug.GetStateManager().setState(new GameState());
+		EugClient.GetStateManager().setState(new GameState());
 	}
 
 	@Override
@@ -48,7 +48,7 @@ public class ConnectState implements State {
 
 	@Override
 	public void onExit() {
-		if(Eug.GetClient().isConnected()){
+		if(EugClient.GetClient().isConnected()){
 			Debug.println("[ConnectState:onExit] Connection established.");
 		}else{
 			Debug.println("[ConnectState:onExit] Unable to establish connection to server.");

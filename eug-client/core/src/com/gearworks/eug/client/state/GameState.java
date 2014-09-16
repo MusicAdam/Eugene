@@ -1,8 +1,8 @@
 package com.gearworks.eug.client.state;
 
-import com.gearworks.eug.client.Eug;
-import com.gearworks.eug.client.entities.ClientEntity;
+import com.gearworks.eug.client.EugClient;
 import com.gearworks.eug.shared.Debug;
+import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.state.State;
 
 public class GameState implements State {
@@ -31,15 +31,15 @@ public class GameState implements State {
 
 	@Override
 	public void render() {
-		for(ClientEntity e : Eug.GetEntities())
+		for(Entity e : EugClient.GetEntities())
 		{ 
-			e.render(Eug.GetSpriteBatch(), Eug.GetShapeRenderer());
+			e.render(EugClient.GetSpriteBatch(), EugClient.GetShapeRenderer());
 		}
 	}
 
 	@Override
 	public void update() {
-		for(ClientEntity e : Eug.GetEntities())
+		for(Entity e : EugClient.GetEntities())
 		{ 
 			e.update();
 		}

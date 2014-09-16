@@ -1,6 +1,7 @@
 package com.gearworks.eug.shared;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
@@ -15,22 +16,42 @@ import com.badlogic.gdx.physics.box2d.EdgeShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.Shape;
+import com.badlogic.gdx.physics.box2d.Transform;
+import com.gearworks.eug.shared.state.BodyState;
+import com.gearworks.eug.shared.state.EntityState;
 
 public class Entity {	
 	public static final int COLLISION_NONE = 0;
 	public static final int COLLISION_UNIT = 1;
 	public static final int COLLISION_WALL = 2;
 	
-	private boolean 	selectable = true;
-	private boolean 	selected;
-	protected float 	selectPadding = 2;
-	protected Body body;
+	protected int 		id;
+	protected Player player;
 	protected boolean 	bodyIsDirty = false; //When true the AABB and the size of the body will be calculated
 	protected Rectangle aabb;
-	protected Vector2 size;
+	protected Sprite 	sprite;
+	protected String 	spriteResource; //Name of the file from which the sprite's texture was loaded
+	protected float 	selectPadding = 2;
+	private boolean 	selectable = true;
+	private boolean 	selected;
+	private Body body;
 	
 	
-	public Entity(){
+	public Entity(int id, Player player){
+		this.player = player;
+		this.id = id;
+	}
+	
+	public Player getPlayer(){
+		return player;
+	}
+	
+	public void setPlayer(Player player){
+		this.player = player;
+	}
+	
+	public int getInstanceId(){
+		return player.getInstanceId();
 	}
 	
 	public Vector2 position(){
@@ -76,37 +97,63 @@ public class Entity {
 		}
 	}
 	
-	public void update(){
+	public void update(){		
 		if(body != null && body.isActive())
 			bodyIsDirty = true;
+		
+		followPhysicsBody();
 	}
 	
-	public void dispose(){}
+	public void dispose()
+	{
+		if(body() == null) return;
+		
+		body().getWorld().destroyBody(body());
+	}
+	
+	protected void followPhysicsBody(){
+		if(sprite == null) return;
+		if(body() == null) return; 
+		
+		Vector2 position = position();
+		sprite.setPosition(position.x - sprite.getWidth()/2, position.y - sprite.getHeight()/2);
+		sprite.setRotation(rotation());
+	}
 	
 	public void beginContactWith(Fixture myFix, Fixture otherFix, Contact contact){}
 	public void presolveContactWith(Fixture myFix, Fixture otherFix, Contact contact){}
 	public void postsolveContactWith(Fixture myFix, Fixture otherFix, Contact contact){}
 	
 	//Spawn is responsible for creating the physics body and sprite associated with this entity
-	//Warning: MUST SET bodyIsDirty = true AFTER MODIFING PHYSICS BODY
 	public void spawn(){}
 	
-	//TODO: Size doesn't work correctly.
-	public Vector2 size(){ cleanBody(); return size; }
-	public float width(){ cleanBody(); return size.x; }
-	public float height(){ cleanBody(); return size.y; }
+	public Vector2 size(){ 
+		if(sprite == null) return new Vector2();
+		return new Vector2(sprite.getWidth(), sprite.getHeight()); 
+	}
+	public float width(){ 
+		if(sprite == null) return 0;
+		
+		return sprite.getWidth(); 
+	}
+	
+	public float height(){ 
+		if(sprite == null) return 0;
+		
+		return sprite.getHeight(); 
+	}
 	public void selectable(boolean s){ selectable = s; }
 	public boolean selectable(){ return selectable; }
 	public void selected(boolean s){ selected = s; }
 	public boolean selected(){ return selected; }
 	public Body body(){ return body; }
+	public void body(Body b){ body = b; bodyIsDirty = true; }
 	
 	//Recalculates AABB and size
 	protected void cleanBody(){
 		if(!bodyIsDirty) return;
 		
 		aabb = new Rectangle();
-		size = new Vector2();
 		for(Fixture fix : body().getFixtureList()){
 			Shape shape = fix.getShape();
 			float rotation = fix.getBody().getTransform().getRotation();
@@ -192,16 +239,6 @@ public class Entity {
 					max.y = vert1.y;
 				}
 			}
-
-			
-			//Calc size
-			if(max.x - min.x > size.x){
-				size.x = max.x - min.x;
-			}
-
-			if(max.y - min.y > size.y){
-				size.y = max.y - min.y;
-			}
 			
 			//Calc aabb
 			BoundingBox thisBox = new BoundingBox(new Vector3(min.x, min.y, 0f), new Vector3(max.x, max.y, 0f));
@@ -226,4 +263,17 @@ public class Entity {
 		aabb.y += position().y;
 		bodyIsDirty = false;
 	}
+	
+	public EntityState getState(){
+		BodyState bodyState = new BodyState();
+		if(body != null){
+			BodyState.FromEntity(this, bodyState);
+		}else{
+			bodyState = null;
+		}
+		return new EntityState(getId(), player.getId(), bodyState, spriteResource);
+	}
+	
+	public void setId(int id){ this.id = id; }
+	public int getId(){ return id; }
 }

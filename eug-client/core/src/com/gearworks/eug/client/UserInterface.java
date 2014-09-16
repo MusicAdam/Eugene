@@ -10,12 +10,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.gearworks.eug.client.entities.ClientEntity;
+import com.gearworks.eug.shared.Entity;
 
 public class UserInterface implements InputProcessor{	
 	public boolean debug_showContacts = true;
 	
-	private ArrayList<ClientEntity> selected;
+	private ArrayList<Entity> selected;
 	//private Array<Group> groups;
 	private Vector2 dragStart;
 	private Vector2 dragPos;
@@ -38,9 +38,9 @@ public class UserInterface implements InputProcessor{
 	@Override
 	public boolean keyDown(int keycode) {
 		if(keycode == Input.Keys.SPACE){
-			Vector2 mousePos = screenToWorld(new Vector2(Gdx.input.getX(), Gdx.input.getY()), Eug.GetCamera());
-			Vector2 dir = mousePos.sub(Eug.GetPlayer().disk().position()).nor();
-			Eug.GetPlayer().disk().applyImpulse(dir);
+			Vector2 mousePos = screenToWorld(new Vector2(Gdx.input.getX(), Gdx.input.getY()), EugClient.GetCamera());
+			//Vector2 dir = mousePos.sub(EugClient.GetPlayer().disk().position()).nor();
+			//EugClient.GetPlayer().disk().applyImpulse(dir);
 		}
 		return false;
 	}
@@ -63,10 +63,10 @@ public class UserInterface implements InputProcessor{
 	@Override
 	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 		if(button == 0){
-			Vector2 mousePos = screenToWorld(new Vector2(screenX, screenY), Eug.GetCamera());
+			Vector2 mousePos = screenToWorld(new Vector2(screenX, screenY), EugClient.GetCamera());
 			
-			Vector2 dir = mousePos.sub(Eug.GetPlayer().disk().position()).nor();
-			Eug.GetPlayer().disk().turnTo(dir);
+			//Vector2 dir = mousePos.sub(EugClient.GetPlayer().disk().position()).nor();
+			//EugClient.GetPlayer().disk().turnTo(dir);
 		}else if(button == 1){
 		}
 		
@@ -90,7 +90,7 @@ public class UserInterface implements InputProcessor{
 	}
 	
 	public void render(SpriteBatch batch, ShapeRenderer renderer){
-		renderer.setProjectionMatrix(Eug.GetCamera().combined);
+		renderer.setProjectionMatrix(EugClient.GetCamera().combined);
 		renderer.identity();
 	}
 
