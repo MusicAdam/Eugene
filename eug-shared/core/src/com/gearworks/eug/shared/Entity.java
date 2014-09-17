@@ -1,6 +1,8 @@
 package com.gearworks.eug.shared;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -14,13 +16,26 @@ import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.EdgeShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.MassData;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.Shape;
 import com.badlogic.gdx.physics.box2d.Transform;
+import com.badlogic.gdx.utils.Array;
+import com.gearworks.eug.shared.entities.DiskEntity;
+import com.gearworks.eug.shared.entities.LevelBoundsEntity;
+import com.gearworks.eug.shared.exceptions.EntityBuildException;
+import com.gearworks.eug.shared.exceptions.EntityUpdateException;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
 
 public class Entity {	
+	public enum Type {
+		BaseEntity,
+		DiskEntity,
+		LevelBoundsEntity
+	}
+	
 	public static final int COLLISION_NONE = 0;
 	public static final int COLLISION_UNIT = 1;
 	public static final int COLLISION_WALL = 2;
@@ -35,11 +50,13 @@ public class Entity {
 	private boolean 	selectable = true;
 	private boolean 	selected;
 	private Body body;
-	
+	private Type type;
 	
 	public Entity(int id, Player player){
 		this.player = player;
 		this.id = id;
+
+		type = Eug.GetEntityType(this);
 	}
 	
 	public Player getPlayer(){
@@ -148,6 +165,7 @@ public class Entity {
 	public boolean selected(){ return selected; }
 	public Body body(){ return body; }
 	public void body(Body b){ body = b; bodyIsDirty = true; }
+	public Type getType(){ return type; }
 	
 	//Recalculates AABB and size
 	protected void cleanBody(){
@@ -265,15 +283,21 @@ public class Entity {
 	}
 	
 	public EntityState getState(){
-		BodyState bodyState = new BodyState();
-		if(body != null){
-			BodyState.FromEntity(this, bodyState);
-		}else{
-			bodyState = null;
-		}
-		return new EntityState(getId(), player.getId(), bodyState, spriteResource);
+		return new EntityState(this);
 	}
 	
 	public void setId(int id){ this.id = id; }
 	public int getId(){ return id; }
+	public String getSpriteResource(){ return spriteResource; }
+	public void setSprite(String resource){
+		if(resource != null){
+			sprite = new Sprite(new Texture(Gdx.files.internal(resource)));
+			sprite.setOriginCenter();
+			spriteResource = resource;
+		}else{
+			sprite = null;
+			spriteResource = null;			
+		}
+	}
+	public void setType(Entity.Type type){ this.type = type; }
 }

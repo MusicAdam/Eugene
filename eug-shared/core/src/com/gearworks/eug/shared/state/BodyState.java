@@ -61,6 +61,10 @@ public class BodyState {
 	public long getTimestamp() {
 		return timestamp;
 	}
+	
+	public int getId(){
+		return id;
+	}
 
 	public Transform getTransform() {
 		return transform;

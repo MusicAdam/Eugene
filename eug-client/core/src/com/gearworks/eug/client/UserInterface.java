@@ -11,6 +11,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.messages.ClientInputMessage;
+import com.gearworks.eug.shared.messages.ClientInputMessage.Event;
 
 public class UserInterface implements InputProcessor{	
 	public boolean debug_showContacts = true;
@@ -39,8 +41,11 @@ public class UserInterface implements InputProcessor{
 	public boolean keyDown(int keycode) {
 		if(keycode == Input.Keys.SPACE){
 			Vector2 mousePos = screenToWorld(new Vector2(Gdx.input.getX(), Gdx.input.getY()), EugClient.GetCamera());
-			//Vector2 dir = mousePos.sub(EugClient.GetPlayer().disk().position()).nor();
-			//EugClient.GetPlayer().disk().applyImpulse(dir);
+			Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
+			EugClient.GetPlayer().getDisk().applyImpulse(dir);
+			
+			ClientInputMessage msg = new ClientInputMessage(EugClient.GetPlayer().getInstanceId(), Event.Key, dir, Input.Keys.SPACE);
+			EugClient.GetPlayer().getConnection().sendUDP(msg);
 		}
 		return false;
 	}
@@ -65,8 +70,11 @@ public class UserInterface implements InputProcessor{
 		if(button == 0){
 			Vector2 mousePos = screenToWorld(new Vector2(screenX, screenY), EugClient.GetCamera());
 			
-			//Vector2 dir = mousePos.sub(EugClient.GetPlayer().disk().position()).nor();
-			//EugClient.GetPlayer().disk().turnTo(dir);
+			Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
+			EugClient.GetPlayer().getDisk().turnTo(dir);
+
+			ClientInputMessage msg = new ClientInputMessage(EugClient.GetPlayer().getInstanceId(), Event.LeftMouseButton, dir, -1);
+			EugClient.GetPlayer().getConnection().sendUDP(msg);
 		}else if(button == 1){
 		}
 		

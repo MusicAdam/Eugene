@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 
 public class NetworkedFixture {
 	long timestamp;
+	int id;
 	float density;
 	float friction;
 	float restitution;
@@ -23,6 +24,7 @@ public class NetworkedFixture {
 		for(int i = 0; i < list.length; i++){
 			Fixture fixture = bodyFixtures.get(i);
 			list[i] = new NetworkedFixture();
+			list[i].id = i;
 			list[i].density = fixture.getDensity();
 			list[i].friction = fixture.getFriction();
 			list[i].restitution = fixture.getRestitution();
@@ -59,6 +61,10 @@ public class NetworkedFixture {
 
 	public Shape getShape() {
 		return shape;
+	}
+	
+	public int getId(){
+		return id;
 	}
 	
 	

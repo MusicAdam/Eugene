@@ -47,7 +47,7 @@ public class DiskEntity extends Entity {
 	
 	public DiskEntity(int id, Player owner) {		
 		super(id, owner);
-		selectable(true);
+		setType(Type.DiskEntity);
 	}
 	
 	
@@ -101,8 +101,9 @@ public class DiskEntity extends Entity {
 	}
 	
 	public void turnTo(Vector2 dir){
+		System.out.println("Turn 1");
 		if(!canDoTurn()) return;
-		
+		System.out.println("Turn 2 " + dir);
 		turnToDirection = dir;
 	}
 	
@@ -112,8 +113,7 @@ public class DiskEntity extends Entity {
 	
 	@Override
 	public void spawn(){
-		sprite = new Sprite(new Texture(Gdx.files.internal("disk.png")));
-		sprite.setOriginCenter();
+		setSprite("disk.png");
 		
 		//Create body def
 		BodyDef bodyDef = new BodyDef();
@@ -122,16 +122,18 @@ public class DiskEntity extends Entity {
 		
 		//Create body
 		body(Eug.GetWorld().createBody(bodyDef));
-		body().setAngularDamping(angularDamping); //TODO: ON server, spawning needs a 'begin' and 'end' clause which sets the current instance to which spawning is happening
+		body().setAngularDamping(angularDamping);
+		body().setUserData(this);
+		
 		//Create Fixture
 		CircleShape unitShape = new CircleShape();
 		unitShape.setRadius((sprite.getWidth()/2) * SharedVars.WORLD_TO_BOX );
 		
 		FixtureDef fix = new FixtureDef();
 		fix.shape = unitShape;
-		fix.density = 1.0f;
+		fix.density = .8f;
 		fix.friction = 0.1f;
-		fix.restitution = 0.0f;
+		fix.restitution = 1.0f;
 		
 		Fixture fixture = body().createFixture(fix);
 		fixture.setUserData(this);

@@ -8,9 +8,11 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.World;
@@ -27,6 +29,7 @@ import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.EntityDestroyedMessage;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageRegistry;
+import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
 import com.gearworks.eug.shared.state.StateManager;
 
 public class EugServer extends Eug {	
@@ -46,7 +49,7 @@ public class EugServer extends Eug {
 	protected Queue<ServerPlayer> idlePlayers;
 	protected World world;
 	protected MessageRegistry messageRegistry;
-	protected Queue<Message> messageQueue;
+	protected Queue<QueuedMessageWrapper> messageQueue;
 	
 	/*
 	 * Overrides
@@ -58,9 +61,9 @@ public class EugServer extends Eug {
 		 * Initialize networking infrastructure
 		 */
 		idlePlayers = new ConcurrentLinkedQueue<ServerPlayer>();
-		messageQueue = new ConcurrentLinkedQueue<Message>();
+		messageQueue = new ConcurrentLinkedQueue<QueuedMessageWrapper>();
 		messageRegistry = new MessageRegistry();
-		server = new Server();
+		server = new Server(SharedVars.WRITE_BUFFER_SIZE, SharedVars.OBJECT_BUFFER_SIZE);
 		server.addListener(new ServerListener());
 		try {
 			MessageRegistry.Initialize(server.getKryo()); //Register messages
@@ -108,9 +111,9 @@ public class EugServer extends Eug {
 			accum -= SharedVars.STEP;
 
 			//Handle queued messages
-			Message message;
+			QueuedMessageWrapper message;
 			while((message = messageQueue.poll()) != null)
-				parseClientMessage(message);
+				parseClientMessage(message.connection, message.message);
 			
 			//TODO: *These things should be moved to a state
 			if(!idlePlayers.isEmpty()){
@@ -141,33 +144,18 @@ public class EugServer extends Eug {
 		 * Handle render logic
 		 * TODO: Server interface, maybe even render selected instances?
 		 */
-		/*
-		Gdx.gl.glClearColor(.1f, .1f, .1f, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
-
-		batch.setProjectionMatrix(camera.combined);
-		shapeRenderer.setProjectionMatrix(camera.combined);
-		try{
-			sm.render();
-		}catch(NullPointerException e){
-			System.out.println("[Eug:Render] NullPointerException encountered. Did you forget to set bodyIsDirty?");
-			throw e;
+		for(Instance inst : instances){
+			inst.render();
 		}
-		
-		if(SharedVars.DEBUG_PHYSICS){
-			Matrix4 dbgMatrix = camera.combined.cpy().scl(SharedVars.BOX_TO_WORLD);
-			b2ddbgRenderer.render(world, dbgMatrix);
-		}
-		*/
 		
 		//TODO: Move to a state to update all instances
 		//world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 	}
 	
-	public void parseClientMessage(Message message)
+	public void parseClientMessage(Connection c, Message message)
 	{
-		messageRegistry.invoke(message.getClass(), message);
+		messageRegistry.invoke(message.getClass(), c, message);
 	}
 	
 	@Override
@@ -188,6 +176,7 @@ public class EugServer extends Eug {
 	public Instance createInstance(){
 		Instance inst = new Instance(instances.size);
 		instances.add(inst);
+		inst.initialize();
 		Debug.println("[EugServer:createInstance] Created instance " + inst.getId());
 		return inst;
 	}
@@ -232,8 +221,10 @@ public class EugServer extends Eug {
 		instance.addEntity(ent);
 		ent.spawn();
 		
-		EntityCreatedMessage msg = new EntityCreatedMessage(ent.getState());
-		ent.getPlayer().getConnection().sendUDP(msg);
+		if(ent.getPlayer().getConnection() != null){
+			EntityCreatedMessage msg = new EntityCreatedMessage(ent.getState());
+			ent.getPlayer().getConnection().sendUDP(msg);
+		}
 		
 		requestInstanceId = -1;
 		return ent;
@@ -244,13 +235,13 @@ public class EugServer extends Eug {
 	{
 		Instance instance = instances.get(ent.getInstanceId());
 		
-
-		
 		try{
 			EntityDestroyedMessage msg = new EntityDestroyedMessage(ent.getId());
 			ent.dispose();
 			instance.removeEntity(ent);
-			ent.getPlayer().getConnection().sendUDP(msg);
+			if(ent.getPlayer().getConnection() != null){
+				ent.getPlayer().getConnection().sendUDP(msg);
+			}
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -316,7 +307,7 @@ public class EugServer extends Eug {
 		pl.setConnection(null); //By setting the connection to null, any logic that attempts to use the player will know to remove them.
 	}
 
-	public static void QueueMessage(Message obj) {
+	public static void QueueMessage(QueuedMessageWrapper obj) {
 		((EugServer)Get()).messageQueue.add(obj);
 	}
 }

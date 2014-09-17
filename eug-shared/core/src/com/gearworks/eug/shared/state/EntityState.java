@@ -1,6 +1,7 @@
 package com.gearworks.eug.shared.state;
 
 import com.badlogic.gdx.physics.box2d.Transform;
+import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Utils;
 
 /*
@@ -10,6 +11,7 @@ public class EntityState {
 	private long timestamp;			//The time at which the state was generated
 	private int id;					//Id of the entity
 	private int playerId;			//Id of the player
+	private Entity.Type type;				//Type of the entity
 	private String spriteResource;	//Name of the texture for the sprite. null if none exists
 	private BodyState bodyState; //The state of the body in the physical world. NUll if none exists
 	
@@ -21,13 +23,20 @@ public class EntityState {
 		spriteResource = null;
 	}	
 	
-	public EntityState(int id, int playerId,
-			BodyState bodyState, String spriteResource) {
+	public EntityState(Entity ent) {
 		this.timestamp = Utils.generateTimeStamp();
-		this.id = id;
-		this.playerId = playerId;
-		this.bodyState = bodyState;
-		this.spriteResource = spriteResource;
+		this.id = ent.getId();
+		this.playerId = ent.getPlayer().getId();
+		
+		this.bodyState = new BodyState();
+		if(ent.body() != null){
+			BodyState.FromEntity(ent, this.bodyState);
+		}else{
+			this.bodyState = null;
+		}
+		
+		this.spriteResource = ent.getSpriteResource();
+		this.type = ent.getType();
 	}
 
 
@@ -37,4 +46,5 @@ public class EntityState {
 	public int getPlayerId() {	return playerId;	}
 	public BodyState getBodyState() {		return bodyState;	}
 	public String getSpriteResource() {		return spriteResource;	}
+	public Entity.Type getType(){ return type; }
 }

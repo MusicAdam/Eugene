@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 
 public class NetworkedJoint {
 	long timestamp;
+	int id;
 	int otherEntityId;
 	Vector2 anchor;
 	boolean isCollideConnected;
@@ -32,6 +33,7 @@ public class NetworkedJoint {
 				joint.isCollideConnected = edge.joint.getCollideConnected();
 				joint.type = edge.joint.getType();
 				joint.isActive = edge.joint.isActive();
+				joint.id = i;
 				list[i] = joint;
 			}else{
 				throw new NullPointerException("[NetworkedJoint:GenerateList] Couldn't generate NetworkedJoint from body definition: user data is not set to parent entity.");

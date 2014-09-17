@@ -15,7 +15,7 @@ import com.gearworks.eug.shared.state.State;
 public class ConnectState implements State {
 	private boolean done = false;
 	private int attempts = 0;
-	private int maxAttempts = 5;
+	private int maxAttempts = 1;
 
 	@Override
 	public void render() {

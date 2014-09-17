@@ -1,8 +1,11 @@
 package com.gearworks.eug.client.state;
 
+import com.badlogic.gdx.math.Vector2;
 import com.gearworks.eug.client.EugClient;
 import com.gearworks.eug.shared.Debug;
 import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.entities.DiskEntity;
+import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.state.State;
 
 public class GameState implements State {

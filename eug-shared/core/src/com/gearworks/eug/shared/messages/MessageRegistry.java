@@ -9,6 +9,8 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.Transform;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryonet.Connection;
+import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.NetworkedFixture;
 import com.gearworks.eug.shared.NetworkedJoint;
 import com.gearworks.eug.shared.state.BodyState;
@@ -32,6 +34,7 @@ public class MessageRegistry {
 		kryo.register(AssignInstanceMessage.class);
 		kryo.register(BodyState.class);
 		kryo.register(EntityState.class);
+		kryo.register(EntityState[].class);
 		kryo.register(Snapshot.class);
 		kryo.register(NetworkedFixture.class);
 		kryo.register(NetworkedFixture[].class);
@@ -45,6 +48,10 @@ public class MessageRegistry {
 		kryo.register(EdgeShape.class);
 		kryo.register(float[].class);
 		kryo.register(Transform.class);
+		kryo.register(Entity.Type.class);
+		kryo.register(InitializeSceneMessage.class);
+		kryo.register(ClientInputMessage.class);
+		kryo.register(ClientInputMessage.Event.class);
 		
 	}
 	
@@ -58,10 +65,10 @@ public class MessageRegistry {
 		messageCallback.type = klass;
 	}
 	
-	public void invoke(Class<?> type, Message message){
+	public void invoke(Class<?> type, Connection c, Message message){
 		for(MessageCallback cb : callbacks){
 			if(cb.type == type){
-				cb.messageReceived(message);
+				cb.messageReceived(c, message);
 			}
 		}
 	}

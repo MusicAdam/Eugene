@@ -15,16 +15,27 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.client.state.ConnectState;
 import com.gearworks.eug.shared.Debug;
 import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.EntityEventListener;
+import com.gearworks.eug.shared.EntityFactory;
 import com.gearworks.eug.shared.Eug;
+import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.entities.DiskEntity;
+import com.gearworks.eug.shared.exceptions.EntityBuildException;
+import com.gearworks.eug.shared.exceptions.EntityUpdateException;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
+import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.MessageRegistry;
+import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
+import com.gearworks.eug.shared.messages.UpdateMessage;
+import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.StateManager;
 
 /*
@@ -46,8 +57,9 @@ public class EugClient extends Eug {
 	protected StateManager sm;
 	protected Array<Entity> entities;
 	protected World world;
-	protected Queue<Message> messageQueue;
+	protected Queue<QueuedMessageWrapper> messageQueue;
 	protected MessageRegistry messageRegistry;
+	protected EntityState entityState;
 	
 	/*
 	 * Overrides
@@ -61,23 +73,35 @@ public class EugClient extends Eug {
 		/*
 		 * Initialize networking infrastructure
 		 */
-		messageQueue = new ConcurrentLinkedQueue<Message>();
+		messageQueue = new ConcurrentLinkedQueue<QueuedMessageWrapper>();
 		messageRegistry = new MessageRegistry();
 		messageRegistry.register(AssignInstanceMessage.class, new MessageCallback(){
 			@Override
-			public void messageReceived(Message msg){
+			public void messageReceived(Connection c, Message msg){
 				AssignInstanceMessage aMsg = (AssignInstanceMessage)msg;
 				EugClient.SetInstance(aMsg.getInstanceId());
 			}
 		});
 		messageRegistry.register(EntityCreatedMessage.class, new MessageCallback(){
 			@Override
-			public void messageReceived(Message msg){
+			public void messageReceived(Connection c, Message msg){
 				((EugClient)Get()).entityCreated((EntityCreatedMessage)msg);
 			}
 		});
+		messageRegistry.register(UpdateMessage.class, new MessageCallback(){
+			@Override
+			public void messageReceived(Connection c, Message msg){
+				((EugClient)Get()).serverUpdate((UpdateMessage)msg);
+			}
+		});
+		messageRegistry.register(InitializeSceneMessage.class, new MessageCallback(){
+			@Override
+			public void messageReceived(Connection c, Message msg){
+				((EugClient)Get()).initializeScene(c, (InitializeSceneMessage)msg);
+			}
+		});
 		
-		client = new Client();
+		client = new Client(SharedVars.WRITE_BUFFER_SIZE, SharedVars.OBJECT_BUFFER_SIZE);
 		client.addListener(new ClientListener());
 		MessageRegistry.Initialize(client.getKryo()); //Register messages
 		client.start();
@@ -101,6 +125,18 @@ public class EugClient extends Eug {
 		
 		entities = new Array<Entity>();
 		
+		//Initialize entity listeners
+		EntityFactory.AddListener(new EntityEventListener(){
+			@Override
+			public void onCreate(Entity ent){
+				if(ent instanceof DiskEntity){
+					if(ent.getPlayer() == player){
+						player.setDisk((DiskEntity)ent);
+					}
+				}
+			}
+		});
+		
 		/*
 		 * Initialize physics
 		 */		
@@ -109,6 +145,45 @@ public class EugClient extends Eug {
 		b2ddbgRenderer = new Box2DDebugRenderer();
 	}
 	
+	protected void initializeScene(Connection c, InitializeSceneMessage msg) {
+		if(!player.isInstanceValid()) return;
+		if(player.isInitialized()){
+			//If for some reason we are still getting this message after we have been initialized and we are initialize, let the server know
+			InitializeSceneMessage ack = new InitializeSceneMessage(player.getInstanceId(), null);
+			player.getConnection().sendUDP(ack);
+			Debug.println("[EugClient:initializeScene] Redundant Scene initialized response sent.");			
+		}
+		
+		for(EntityState state : msg.getSnapshot().getEntityStates()){
+			try {
+				EntityFactory.BuildFromState(state);
+			} catch (EntityBuildException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (EntityUpdateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		player.setInitialized(true);
+		InitializeSceneMessage ack = new InitializeSceneMessage(player.getInstanceId(), null);
+		player.getConnection().sendUDP(ack);
+		Debug.println("[EugClient:initializeScene] Scene initialized and response sent.");
+	}
+
+	protected void serverUpdate(UpdateMessage msg) {
+		if(!player.isInitialized() || !player.isInstanceValid()) return;
+		
+		for(EntityState state : msg.getSnapshot().getEntityStates()){
+			try {
+				EntityFactory.UpdateToState(state);
+			} catch (EntityUpdateException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	protected static void SetInstance(int instanceId) {
 		EugClient.GetPlayer().setInstanceId(instanceId);
 		AssignInstanceMessage msg= new AssignInstanceMessage(instanceId, GetPlayer().getId());
@@ -118,7 +193,13 @@ public class EugClient extends Eug {
 
 	//Handler for message sent by the server that an entity was created
 	protected void entityCreated(EntityCreatedMessage msg) {
-		Debug.println("An entity was created on the server");
+		try {
+			EntityFactory.BuildFromState(msg.getEntityState());
+		} catch (EntityBuildException e) {
+			e.printStackTrace();
+		} catch (EntityUpdateException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -131,9 +212,9 @@ public class EugClient extends Eug {
 			accum -= SharedVars.STEP;
 			
 			//Handle queued messages
-			Message message;
+			QueuedMessageWrapper message;
 			while((message = messageQueue.poll()) != null)
-				parseServerMessage(message);
+				parseServerMessage(message.connection, message.message);
 				
 			sm.update();
 		}
@@ -168,9 +249,9 @@ public class EugClient extends Eug {
 		viewport.update(width, height, true);
 	}
 	
-	public void parseServerMessage(Message message)
+	public void parseServerMessage(Connection c, Message message)
 	{
-		messageRegistry.invoke(message.getClass(), message);
+		messageRegistry.invoke(message.getClass(), c, message);
 	}
 	
 	/*
@@ -207,7 +288,7 @@ public class EugClient extends Eug {
 		return ((EugClient)Get()).camera;
 	}
 	
-	public static void QueueMessage(Message m){
+	public static void QueueMessage(QueuedMessageWrapper m){
 		((EugClient)Get()).messageQueue.add(m);
 	}
 	
@@ -251,6 +332,27 @@ public class EugClient extends Eug {
 
 	public static void SetPlayer(ClientPlayer clientPlayer) {
 		((EugClient)Get()).player = clientPlayer;
+	}
+	
+	@Override
+	public Entity findEntityById(int id){
+		for(Entity e : entities){
+			if(e.getId() == id)
+				return e;
+		}
+		
+		return null;
+	}
+	
+	@Override
+	public Player findPlayerById(int id){
+		//TOOD: Add other players connected to the server
+		return player;
+	}
+	
+	@Override
+	public void setEntityState(EntityState state){
+		entityState = state;
 	}
 	
 }

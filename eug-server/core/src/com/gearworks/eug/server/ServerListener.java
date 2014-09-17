@@ -4,6 +4,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.messages.Message;
+import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
 import com.gearworks.eug.shared.messages.SecondTestMessage;
 import com.gearworks.eug.shared.messages.TestMessage;
 
@@ -26,7 +27,10 @@ public class ServerListener extends Listener {
 	{
 		if(obj instanceof Message)
 		{
-			EugServer.QueueMessage((Message)obj);
+			QueuedMessageWrapper w = new QueuedMessageWrapper();
+			w.connection = connection;
+			w.message = (Message)obj;
+			EugServer.QueueMessage(w);
 		}
 	}
 }
