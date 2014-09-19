@@ -101,9 +101,7 @@ public class DiskEntity extends Entity {
 	}
 	
 	public void turnTo(Vector2 dir){
-		System.out.println("Turn 1");
 		if(!canDoTurn()) return;
-		System.out.println("Turn 2 " + dir);
 		turnToDirection = dir;
 	}
 	

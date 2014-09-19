@@ -3,6 +3,7 @@ package com.gearworks.eug.shared;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
+import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.StateManager;
@@ -80,5 +81,13 @@ public class Eug extends ApplicationAdapter{
 	protected void setEntityState(EntityState state){ throw new NotImplementedException(); }
 	public static void SetEntityState(EntityState state) {
 		Get().setEntityState(state);
+	}
+	
+	/*
+	 * Returns the connection given by the id if it exists
+	 */
+	protected Connection getConnectionById(int id){ throw new NotImplementedException(); }
+	public static Connection GetConnectionById(int id){ 
+		return Get().getConnectionById(id);
 	}
 }

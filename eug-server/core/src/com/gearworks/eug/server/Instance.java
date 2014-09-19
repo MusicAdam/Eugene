@@ -22,6 +22,7 @@ import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.ClientInputMessage;
+import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
@@ -54,7 +55,7 @@ public class Instance {
 		players = new Array<ServerPlayer>();
 		entities = new Array<Entity>();
 		world = new World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
-		serverPlayer = new Player(null);
+		serverPlayer = new Player(-1);
 		serverPlayer.setInstanceId(id);
 		
 		//Setup message handlers
@@ -105,11 +106,9 @@ public class Instance {
 		
 		if(msg.getEvent() == Event.Key){
 			if(msg.getKey() == Input.Keys.SPACE){
-				System.out.println("CLIENT INPUT RECEIVED");
 				pl.getDisk().applyImpulse(msg.getInfoVector());
 			}
 		}else if(msg.getEvent() == Event.LeftMouseButton){
-			System.out.println("CLIENT INPUT RECEIVED");
 			pl.getDisk().turnTo(msg.getInfoVector());
 		}
 	}
@@ -122,14 +121,15 @@ public class Instance {
 		//Generate a new snapshot if one is needed
 		Snapshot snapshot = null;
 		if(previousSnapshot == null || Utils.generateTimeStamp() - previousSnapshot.getTimestamp() >= SNAPSHOT_DELAY){ //Create new snapshot immediately if previous one is null.
-			snapshot = new Snapshot(id, getEntityStates());
+			snapshot = new Snapshot(id, getPlayerIds(), getEntityStates());
 			
 			if(previousSnapshot == null){
 				previousSnapshot = snapshot;
 			}
 		}
 		
-		for(ServerPlayer pl : players){
+		for(int i = 0; i < players.size; i++){
+			ServerPlayer pl = players.get(i);
 			//Check for invalid players
 			if(!pl.isInstanceValid()){
 				//Resend message if enough time has elapsed
@@ -166,7 +166,7 @@ public class Instance {
 			}
 			
 			//Check for disconnected players
-			if(pl.getConnection() == null){
+			if(pl.isDisconnected()){
 				removePlayerQueue.add(pl);
 			}
 		}
@@ -197,6 +197,14 @@ public class Instance {
 		return states;
 	}
 	
+	private int[] getPlayerIds(){
+		int[] playerIds = new int[players.size];
+		for(int i = 0; i < players.size; i++){
+			playerIds[i] = players.get(i).getId();
+		}
+		return playerIds;
+	}
+	
 	//Attempts to add player to the instance, returns true on success false if instance if full
 	//Additionally sends player a message that he has been added to this instance
 	public boolean addPlayer(ServerPlayer player){
@@ -223,6 +231,14 @@ public class Instance {
 	
 	public Entity addEntity(Entity ent){
 		entities.add(ent);
+		EntityCreatedMessage msg = new EntityCreatedMessage(ent.getState());
+
+		for(Player pl : players){
+			if(pl.getConnection() != null && pl.isInitialized()){
+				pl.getConnection().sendUDP(msg);
+			}
+		}
+		
 		return ent;
 	}
 	

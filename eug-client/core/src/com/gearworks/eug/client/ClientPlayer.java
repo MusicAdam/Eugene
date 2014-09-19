@@ -5,7 +5,7 @@ import com.gearworks.eug.shared.Player;
 
 public class ClientPlayer extends Player {
 
-	public ClientPlayer(Connection conn) {
-		super(conn);
+	public ClientPlayer(int id) {
+		super(id);
 	}
 }

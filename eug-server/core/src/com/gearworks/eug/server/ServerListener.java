@@ -13,7 +13,7 @@ public class ServerListener extends Listener {
 	@Override
 	public void connected(Connection connection)
 	{
-		ServerPlayer player = new ServerPlayer(connection);
+		ServerPlayer player = new ServerPlayer(connection.getID());
 		EugServer.QueueIdlePlayer(player);
 	}
 	

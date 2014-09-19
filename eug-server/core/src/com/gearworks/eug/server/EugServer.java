@@ -123,7 +123,7 @@ public class EugServer extends Eug {
 				while(!instance.isFull() && !idlePlayers.isEmpty()){
 					ServerPlayer pl = idlePlayers.poll();
 					
-					if(pl.getConnection() != null){	
+					if(!pl.isDisconnected()){	
 						instance.addPlayer(pl);		
 					}else{		
 						pl.dispose();
@@ -218,13 +218,8 @@ public class EugServer extends Eug {
 		
 		Instance instance = instances.get(requestInstanceId); //Needed for ent.spawn();
 		
-		instance.addEntity(ent);
 		ent.spawn();
-		
-		if(ent.getPlayer().getConnection() != null){
-			EntityCreatedMessage msg = new EntityCreatedMessage(ent.getState());
-			ent.getPlayer().getConnection().sendUDP(msg);
-		}
+		instance.addEntity(ent);
 		
 		requestInstanceId = -1;
 		return ent;
@@ -239,7 +234,7 @@ public class EugServer extends Eug {
 			EntityDestroyedMessage msg = new EntityDestroyedMessage(ent.getId());
 			ent.dispose();
 			instance.removeEntity(ent);
-			if(ent.getPlayer().getConnection() != null){
+			if(!ent.getPlayer().isDisconnected()){
 				ent.getPlayer().getConnection().sendUDP(msg);
 			}
 		}catch(Exception e){
@@ -304,10 +299,19 @@ public class EugServer extends Eug {
 	}
 	
 	public static void RemovePlayer(ServerPlayer pl) {
-		pl.setConnection(null); //By setting the connection to null, any logic that attempts to use the player will know to remove them.
+		pl.setDisconnected(true); 
 	}
 
 	public static void QueueMessage(QueuedMessageWrapper obj) {
 		((EugServer)Get()).messageQueue.add(obj);
+	}
+	
+	@Override
+	protected Connection getConnectionById(int id){
+		for(int i = 0; i < server.getConnections().length; i++){
+			if(server.getConnections()[i].getID() == id)
+				return server.getConnections()[i];
+		}
+		return null;
 	}
 }

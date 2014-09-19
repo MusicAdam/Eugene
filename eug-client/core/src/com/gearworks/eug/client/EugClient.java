@@ -60,6 +60,7 @@ public class EugClient extends Eug {
 	protected Queue<QueuedMessageWrapper> messageQueue;
 	protected MessageRegistry messageRegistry;
 	protected EntityState entityState;
+	protected Array<ClientPlayer> otherPlayers; //These are other players connected to the server
 	
 	/*
 	 * Overrides
@@ -175,6 +176,43 @@ public class EugClient extends Eug {
 	protected void serverUpdate(UpdateMessage msg) {
 		if(!player.isInitialized() || !player.isInstanceValid()) return;
 		
+		//Update players
+		for(int playerId : msg.getSnapshot().getPlayerIds()){
+			if(playerId == player.getId()) continue;
+			if(Eug.FindPlayerById(playerId) == null){
+				ClientPlayer pl = new ClientPlayer(playerId);
+				otherPlayers.add(pl);
+				Debug.println("[EugClient:serverUpdate] Player " + playerId + " connected");
+			}
+		}
+		
+		//Check for player removal
+		//Do this preliminary check to avoid iterating all players unless absolutely needed
+		if(msg.getSnapshot().getPlayerIds().length != otherPlayers.size-1){
+			Array<Integer> disconnectedPlayers = new Array<Integer>();
+			for(int i = 0; i < otherPlayers.size; i++){
+				boolean found = false;
+				
+				for(int j = 0; j < msg.getSnapshot().getPlayerIds().length; j++){
+					if(msg.getSnapshot().getPlayerIds()[j] == otherPlayers.get(i).getId()){
+						found = true;
+						break;
+					}
+				}
+				
+				if(!found){
+					disconnectedPlayers.add(otherPlayers.get(i).getId());
+				}
+			}
+			
+			for(int i = 0; i < disconnectedPlayers.size; i++){
+				otherPlayers.removeValue((ClientPlayer)Eug.FindPlayerById(disconnectedPlayers.get(i)), true);
+				Debug.println("[EugClient:serverUpdate] Player " + disconnectedPlayers.get(i) + " disconnected");
+				
+			}
+		}
+		
+		//Update entities
 		for(EntityState state : msg.getSnapshot().getEntityStates()){
 			try {
 				EntityFactory.UpdateToState(state);
@@ -346,8 +384,13 @@ public class EugClient extends Eug {
 	
 	@Override
 	public Player findPlayerById(int id){
-		//TOOD: Add other players connected to the server
-		return player;
+		if(id == player.getId()) return player;
+		
+		for(int i = 0; i < otherPlayers.size; i++)
+			if(otherPlayers.get(i).getId() == id) 
+				return otherPlayers.get(i);
+		
+		return null;
 	}
 	
 	@Override
@@ -355,4 +398,10 @@ public class EugClient extends Eug {
 		entityState = state;
 	}
 	
+	@Override
+	protected Connection getConnectionById(int id){
+		if(id == player.getId())
+			return 
+		return null; //Other clients can't send messages from our client... ??
+	}
 }
