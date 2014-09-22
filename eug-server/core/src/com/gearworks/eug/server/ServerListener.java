@@ -19,7 +19,7 @@ public class ServerListener extends Listener {
 	
 	@Override
 	public void disconnected(Connection connection){		
-		EugServer.RemovePlayerByConnection(connection);
+		EugServer.RemovePlayer(connection.getID());
 	}
 	
 	@Override

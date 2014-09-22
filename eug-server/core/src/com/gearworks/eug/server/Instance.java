@@ -37,13 +37,15 @@ public class Instance {
 	public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot
 	
 	private int id;
+	private int time;
 	private Array<ServerPlayer> 	players;
 	private Array<Entity>	entities;
 	private World			world;
 	private Queue<ServerPlayer> 	removePlayerQueue;
 	private Snapshot previousSnapshot;
 	private Box2DDebugRenderer b2ddbgRenderer; 
-	private Player serverPlayer; //This is the player to which level entities belong.
+	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
+	private Array<Integer> disconnectedPlayerIds;
 	
 	boolean test = true;
 	
@@ -55,8 +57,10 @@ public class Instance {
 		players = new Array<ServerPlayer>();
 		entities = new Array<Entity>();
 		world = new World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
-		serverPlayer = new Player(-1);
+		serverPlayer = new ServerPlayer(-1);
 		serverPlayer.setInstanceId(id);
+		disconnectedPlayerIds = new Array<Integer>();
+		time = 0;
 		
 		//Setup message handlers
 		/*
@@ -106,10 +110,10 @@ public class Instance {
 		
 		if(msg.getEvent() == Event.Key){
 			if(msg.getKey() == Input.Keys.SPACE){
-				pl.getDisk().applyImpulse(msg.getInfoVector());
+				((ServerPlayer)pl).getDisk().applyImpulse(msg.getInfoVector());
 			}
 		}else if(msg.getEvent() == Event.LeftMouseButton){
-			pl.getDisk().turnTo(msg.getInfoVector());
+			((ServerPlayer)pl).getDisk().turnTo(msg.getInfoVector());
 		}
 	}
 
@@ -121,7 +125,8 @@ public class Instance {
 		//Generate a new snapshot if one is needed
 		Snapshot snapshot = null;
 		if(previousSnapshot == null || Utils.generateTimeStamp() - previousSnapshot.getTimestamp() >= SNAPSHOT_DELAY){ //Create new snapshot immediately if previous one is null.
-			snapshot = new Snapshot(id, getPlayerIds(), getEntityStates());
+			snapshot = new Snapshot(id, time, getPlayerIds(), getDisconnectedPlayerIds(), getEntityStates());
+			time++;
 			
 			if(previousSnapshot == null){
 				previousSnapshot = snapshot;
@@ -173,8 +178,10 @@ public class Instance {
 		
 		//Remove disconnected players
 		ServerPlayer toRemove = null;
-		while((toRemove = removePlayerQueue.poll()) != null)
+		while((toRemove = removePlayerQueue.poll()) != null){
+			disconnectedPlayerIds.add(toRemove.getId()); 
 			removePlayer(toRemove);
+		}
 		
 		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 	}
@@ -198,11 +205,20 @@ public class Instance {
 	}
 	
 	private int[] getPlayerIds(){
-		int[] playerIds = new int[players.size];
+		int[] playerIds = new int[players.size + 1];
+		playerIds[0] = serverPlayer.getId();
 		for(int i = 0; i < players.size; i++){
-			playerIds[i] = players.get(i).getId();
+			playerIds[i + 1] = players.get(i).getId();
 		}
 		return playerIds;
+	}
+	
+	private int[] getDisconnectedPlayerIds(){
+		int[] dPlayers = new int[disconnectedPlayerIds.size];
+		for(int i = 0; i < disconnectedPlayerIds.size; i++){
+			dPlayers[i] = disconnectedPlayerIds.get(i);
+		}
+		return dPlayers;
 	}
 	
 	//Attempts to add player to the instance, returns true on success false if instance if full
@@ -220,6 +236,7 @@ public class Instance {
 	//Attempts to remove a player from the instance, return true on success, false if player is not in instance
 	public boolean removePlayer(ServerPlayer player){
 		if(players.removeValue(player, true)){
+			player.dispose(); //Removes the player's entities
 			player.setInstanceId(-1);
 			EugServer.QueueIdlePlayer(player);
 			Debug.println("[Instance:removePlayer] ["+getId()+"] Removed player " + player.getId());
@@ -230,20 +247,15 @@ public class Instance {
 	}
 	
 	public Entity addEntity(Entity ent){
-		entities.add(ent);
-		EntityCreatedMessage msg = new EntityCreatedMessage(ent.getState());
-
-		for(Player pl : players){
-			if(pl.getConnection() != null && pl.isInitialized()){
-				pl.getConnection().sendUDP(msg);
-			}
-		}
-		
+		entities.add(ent);		
+		ent.getPlayer().addEntity(ent);
 		return ent;
 	}
 	
 	public void removeEntity(Entity ent){
-		entities.removeValue(ent, true);
+		if(entities.removeValue(ent, true)){
+			ent.getPlayer().removeEntity(ent);
+		}
 	}
 	
 	public void sendAssignInstanceMessage(ServerPlayer pl){
@@ -262,6 +274,16 @@ public class Instance {
 				return pl;
 		}
 		
+		return null;
+	}
+
+	public ServerPlayer findPlayerById(int id) {
+		if(id == serverPlayer.getId()) return serverPlayer;
+		for(int i = 0; i < players.size; i++){
+			ServerPlayer pl = players.get(i);
+			if(pl.getId() == id)
+				return pl;
+		}
 		return null;
 	}
 }

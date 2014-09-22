@@ -133,8 +133,8 @@ public class EugServer extends Eug {
 			}
 			
 			//*
-			for(Instance inst : instances){
-				inst.update();
+			for(int i = 0; i < instances.size; i++){
+				instances.get(i).update();
 			}
 			
 			sm.update();
@@ -145,8 +145,8 @@ public class EugServer extends Eug {
 		 * TODO: Server interface, maybe even render selected instances?
 		 */
 		
-		for(Instance inst : instances){
-			inst.render();
+		for(int i = 0; i < instances.size; i++){
+			instances.get(i).render();
 		}
 		
 		//TODO: Move to a state to update all instances
@@ -231,12 +231,8 @@ public class EugServer extends Eug {
 		Instance instance = instances.get(ent.getInstanceId());
 		
 		try{
-			EntityDestroyedMessage msg = new EntityDestroyedMessage(ent.getId());
 			ent.dispose();
 			instance.removeEntity(ent);
-			if(!ent.getPlayer().isDisconnected()){
-				ent.getPlayer().getConnection().sendUDP(msg);
-			}
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -279,7 +275,7 @@ public class EugServer extends Eug {
 
 	
 	public static ServerPlayer FindPlayerByConnection(Connection connection) {
-		for(ServerPlayer pl : ((EugServer)Get()).idlePlayers){//WARNING: Getting an iterator to ConcurrentQueue is not 
+		for(ServerPlayer pl : ((EugServer)Get()).idlePlayers){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
 			if(pl.getConnection() == connection)
 				return pl;
 		}
@@ -293,12 +289,13 @@ public class EugServer extends Eug {
 		return null;
 	}
 
-	public static void RemovePlayerByConnection(Connection connection) {
-		ServerPlayer pl = FindPlayerByConnection(connection);
-		RemovePlayer(pl);
+	public static void RemovePlayer(int id) {
+		Player pl = FindPlayerById(id);
+		RemovePlayer((ServerPlayer)pl);
 	}
 	
 	public static void RemovePlayer(ServerPlayer pl) {
+		if(pl == null) return;
 		pl.setDisconnected(true); 
 	}
 
@@ -312,6 +309,22 @@ public class EugServer extends Eug {
 			if(server.getConnections()[i].getID() == id)
 				return server.getConnections()[i];
 		}
+		return null;
+	}
+	
+	@Override 
+	protected Player findPlayerById(int id){
+		for(ServerPlayer pl : ((EugServer)Get()).idlePlayers){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
+			if(pl.getId() == id)
+				return pl;
+		}
+		
+		for(Instance inst : ((EugServer)Get()).instances){
+			ServerPlayer pl;
+			if((pl = inst.findPlayerById(id)) != null)
+				return pl;
+		}
+		
 		return null;
 	}
 }

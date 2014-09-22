@@ -1,8 +1,8 @@
 package com.gearworks.eug.client;
 
-import com.apple.crypto.provider.Debug;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
+import com.gearworks.eug.shared.Debug;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
 
@@ -10,6 +10,7 @@ public class ClientListener extends Listener {
 	
 	public void connected(Connection connection){
 		EugClient.SetPlayer(new ClientPlayer(connection.getID()));
+		EugClient.SetConnection(connection);
 		Debug.println("[ClientListener:connected] " + connection.getID() + " connected.");
 	}
 	

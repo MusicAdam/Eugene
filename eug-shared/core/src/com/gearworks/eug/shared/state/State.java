@@ -1,5 +1,7 @@
 package com.gearworks.eug.shared.state;
 
+import com.badlogic.gdx.InputProcessor;
+
 public interface State {
 	public boolean canEnterState();
 	public void onEnter();

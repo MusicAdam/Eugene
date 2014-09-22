@@ -69,6 +69,10 @@ public class BodyState {
 	public Transform getTransform() {
 		return transform;
 	}
+	
+	public void setTransform(Transform t){
+		this.transform = t;
+	}
 
 	public float getAngularDamping() {
 		return angularDamping;

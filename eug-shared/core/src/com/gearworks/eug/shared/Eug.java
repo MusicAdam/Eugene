@@ -90,4 +90,9 @@ public class Eug extends ApplicationAdapter{
 	public static Connection GetConnectionById(int id){ 
 		return Get().getConnectionById(id);
 	}
+
+	protected boolean entityExists(int id){ throw new NotImplementedException(); }
+	public static boolean EntityExists(int id) {
+		return Get().entityExists(id);
+	}
 }

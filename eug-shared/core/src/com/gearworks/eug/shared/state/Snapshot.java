@@ -7,25 +7,34 @@ import com.gearworks.eug.shared.Utils;
  */
 public class Snapshot {
 	private int instanceId; //Server instance to which this snapshot is referring
-	private long timestamp; //Time the server created the snapshot.
+	private long timestamp;
+	private int tick; //Time the server created the snapshot.
 	private EntityState[] entityStates; //The states for all the entitites in this instance
 	private int[] playerIds; //List of players id's who are connected to this instnace.
+	private int[] disconnectedPlayers; //List of players who have disconnected since last snapshot
 	
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
+		tick = -1;
 		instanceId = -1;
 		entityStates = null;
 	}
 
-	public Snapshot(int instanceId, int[] playerIds, EntityState[] entityStates) {
+	public Snapshot(int instanceId, int tick, int[] playerIds, int[] disconnectedPlayers, EntityState[] entityStates) {
+		timestamp = Utils.generateTimeStamp();
 		this.instanceId = instanceId;
-		this.timestamp = Utils.generateTimeStamp();
+		this.tick = tick;
 		this.entityStates = entityStates;
 		this.playerIds = playerIds;
+		this.disconnectedPlayers = disconnectedPlayers;
 	}
 	
 	public int getInstanceId() { return instanceId;	}
-	public long getTimestamp() { return timestamp; }
+	public int getTick() { return tick; }
+	public long getTimestamp(){ return timestamp; }
 	public EntityState[] getEntityStates() { return entityStates; }
 	public int[] getPlayerIds(){ return playerIds; }
+	public int[] getDisconnectedPlayers() {
+		return disconnectedPlayers;
+	}
 }

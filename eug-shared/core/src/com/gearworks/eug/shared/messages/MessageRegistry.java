@@ -52,6 +52,7 @@ public class MessageRegistry {
 		kryo.register(InitializeSceneMessage.class);
 		kryo.register(ClientInputMessage.class);
 		kryo.register(ClientInputMessage.Event.class);
+		kryo.register(int[].class);
 		
 	}
 	
@@ -60,9 +61,15 @@ public class MessageRegistry {
 		callbacks = new Array<MessageCallback>();
 	}
 	
-	public void register(Class<?> klass, MessageCallback messageCallback){
-		callbacks.add(messageCallback);
+	public synchronized int register(Class<?> klass, MessageCallback messageCallback){
 		messageCallback.type = klass;
+		callbacks.add(messageCallback);
+		
+		return callbacks.size - 1;
+	}
+	
+	public synchronized void remove(int index){
+		callbacks.removeIndex(index);
 	}
 	
 	public void invoke(Class<?> type, Connection c, Message message){

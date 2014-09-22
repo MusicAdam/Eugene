@@ -16,10 +16,11 @@ public class EntityFactory {
 	/*
 	 * Factory listeners to hook into entity creation/updates
 	 */
-	public static void AddListener(EntityEventListener listener){
+	public static EntityEventListener AddListener(EntityEventListener listener){
 		if(listeners == null)
 			listeners = new Array<EntityEventListener>();
 		listeners.add(listener);
+		return listener;
 	}
 	
 	public static void RemoveListener(EntityEventListener listener){
@@ -57,6 +58,7 @@ public class EntityFactory {
 		Eug.SetEntityState(state);
 		Eug.Spawn(ent);
 		Eug.SetEntityState(null);
+		player.addEntity(ent);
 		UpdateToState(state);
 		
 		for(EntityEventListener listener : listeners){

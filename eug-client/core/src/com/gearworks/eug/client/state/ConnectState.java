@@ -57,7 +57,7 @@ public class ConnectState implements State {
 
 	@Override
 	public boolean canEnterState() {
-		return true;
+		return EugClient.GetPlayer() == null || !EugClient.GetPlayer().isConnected();
 	}
 
 	@Override
@@ -67,7 +67,6 @@ public class ConnectState implements State {
 
 	@Override
 	public int getId() {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 

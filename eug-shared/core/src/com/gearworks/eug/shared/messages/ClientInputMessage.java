@@ -1,6 +1,7 @@
 package com.gearworks.eug.shared.messages;
 
 import com.badlogic.gdx.math.Vector2;
+import com.gearworks.eug.shared.Utils;
 
 public class ClientInputMessage extends Message {
 	public enum Event{
@@ -9,6 +10,7 @@ public class ClientInputMessage extends Message {
 		Key
 	}
 	
+	private long timestamp;
 	private Event event;
 	private Vector2 infoVector;
 	private int key;
@@ -22,11 +24,14 @@ public class ClientInputMessage extends Message {
 	}
 	
 	public ClientInputMessage(int instanceId, Event event, Vector2 infoVector, int key){
+		this.timestamp = Utils.generateTimeStamp();
 		this.event = event;
 		this.infoVector = infoVector;
 		this.key = key;
 	}
 
+	public long getTimestamp(){ return timestamp; }
+	
 	public Event getEvent() {
 		return event;
 	}
