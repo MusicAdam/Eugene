@@ -2,7 +2,7 @@ package com.gearworks.eug.shared.state;
 
 import com.badlogic.gdx.physics.box2d.Transform;
 import com.gearworks.eug.shared.Entity;
-import com.gearworks.eug.shared.Utils;
+import com.gearworks.eug.shared.utils.Utils;
 
 /*
  * Serializable class that represents the state of an entity.

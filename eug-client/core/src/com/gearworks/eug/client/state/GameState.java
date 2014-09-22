@@ -1,7 +1,10 @@
 package com.gearworks.eug.client.state;
 
+import java.nio.Buffer;
+
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Transform;
+import com.badlogic.gdx.utils.BufferUtils;
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.client.EugClient;
 import com.gearworks.eug.shared.Debug;
@@ -9,7 +12,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.EntityEventListener;
 import com.gearworks.eug.shared.EntityFactory;
 import com.gearworks.eug.shared.Eug;
-import com.gearworks.eug.shared.Utils;
+import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
@@ -19,7 +22,10 @@ import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.UpdateMessage;
 import com.gearworks.eug.shared.state.EntityState;
+import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.state.State;
+import com.gearworks.eug.shared.utils.CircularBuffer;
+import com.gearworks.eug.shared.utils.Utils;
 
 
 /*
@@ -41,6 +47,8 @@ public class GameState implements State {
 	private int serverUpdateMessageIndex = -1;
 	private EntityEventListener entityEventListener;
 	private long latency;
+	private CircularBuffer<Snapshot> history;
+	private int tick;
 
 	@Override
 	public boolean canEnterState() {
@@ -50,6 +58,7 @@ public class GameState implements State {
 	@Override
 	public void onEnter() {
 		Debug.println("[GameState: onEnter()]");
+		history = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
 		
 		//Register assigninstancemessage to wait for our instance to be assigned.
 		assignInstanceMessageIndex = EugClient.GetMessageRegistry().register(AssignInstanceMessage.class, new MessageCallback(){
@@ -139,6 +148,8 @@ public class GameState implements State {
 				});
 			}
 		}
+		
+		tick++;
 	}
 	
 	protected void initializeScene(Connection c, InitializeSceneMessage msg) {
@@ -150,6 +161,8 @@ public class GameState implements State {
 			Debug.println("[GameState:initializeScene] Redundant Scene initialized response sent.");	
 			return;
 		}
+		
+		tick = msg.getSnapshot().getTick();
 		
 		EugClient.UpdatePlayers(msg.getSnapshot().getPlayerIds(), msg.getSnapshot().getDisconnectedPlayers());
 		
@@ -176,6 +189,7 @@ public class GameState implements State {
 	protected void serverUpdate(UpdateMessage msg) {
 		if(!EugClient.GetPlayer().isValid()) return;
 		
+		history.push(msg.getSnapshot());
 		latency = (Utils.generateTimeStamp() - msg.getSnapshot().getTimestamp());
 		
 		EugClient.UpdatePlayers(msg.getSnapshot().getPlayerIds(), msg.getSnapshot().getDisconnectedPlayers());
@@ -218,6 +232,8 @@ public class GameState implements State {
 		}
 		
 	}
+	
+	public int getTick(){ return tick; }
 	
 	@Override
 	public int getId() {

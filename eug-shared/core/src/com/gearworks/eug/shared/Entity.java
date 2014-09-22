@@ -28,6 +28,7 @@ import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
+import com.gearworks.eug.shared.utils.Utils;
 
 public class Entity {	
 	public enum Type {

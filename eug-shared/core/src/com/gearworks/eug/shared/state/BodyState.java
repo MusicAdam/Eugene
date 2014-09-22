@@ -7,7 +7,7 @@ import com.badlogic.gdx.physics.box2d.Transform;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.NetworkedFixture;
 import com.gearworks.eug.shared.NetworkedJoint;
-import com.gearworks.eug.shared.Utils;
+import com.gearworks.eug.shared.utils.Utils;
 
 /*
  * Encapsulates all of the information on the state of the body and its fixtures in the physics simulation

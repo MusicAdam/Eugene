@@ -10,7 +10,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.gearworks.eug.client.state.GameState;
 import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.messages.ClientInputMessage;
 import com.gearworks.eug.shared.messages.ClientInputMessage.Event;
 
@@ -40,12 +42,15 @@ public class UserInterface implements InputProcessor{
 	@Override
 	public boolean keyDown(int keycode) {
 		if(keycode == Input.Keys.SPACE){
-			Vector2 mousePos = screenToWorld(new Vector2(Gdx.input.getX(), Gdx.input.getY()), EugClient.GetCamera());
-			Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
-			EugClient.GetPlayer().getDisk().applyImpulse(dir);
-			
-			ClientInputMessage msg = new ClientInputMessage(EugClient.GetPlayer().getInstanceId(), Event.Key, dir, Input.Keys.SPACE);
-			EugClient.GetPlayer().getConnection().sendUDP(msg);
+			if(Eug.GetStateManager().state() instanceof GameState){
+				Vector2 mousePos = screenToWorld(new Vector2(Gdx.input.getX(), Gdx.input.getY()), EugClient.GetCamera());
+				Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
+				EugClient.GetPlayer().getDisk().applyImpulse(dir);
+				
+				GameState state = (GameState)Eug.GetStateManager().state();
+				ClientInputMessage msg = new ClientInputMessage(EugClient.GetPlayer().getInstanceId(), state.getTick(), Event.Key, dir, Input.Keys.SPACE);
+				EugClient.GetPlayer().getConnection().sendUDP(msg);
+			}
 		}
 		return false;
 	}
@@ -68,13 +73,16 @@ public class UserInterface implements InputProcessor{
 	@Override
 	public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 		if(button == 0){
-			Vector2 mousePos = screenToWorld(new Vector2(screenX, screenY), EugClient.GetCamera());
-			
-			Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
-			EugClient.GetPlayer().getDisk().turnTo(dir);
-
-			ClientInputMessage msg = new ClientInputMessage(EugClient.GetPlayer().getInstanceId(), Event.LeftMouseButton, dir, -1);
-			EugClient.GetPlayer().getConnection().sendUDP(msg);
+			if(Eug.GetStateManager().state() instanceof GameState){
+				Vector2 mousePos = screenToWorld(new Vector2(screenX, screenY), EugClient.GetCamera());
+				
+				Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
+				EugClient.GetPlayer().getDisk().turnTo(dir);
+	
+				GameState state = (GameState)Eug.GetStateManager().state();
+				ClientInputMessage msg = new ClientInputMessage(EugClient.GetPlayer().getInstanceId(), state.getTick(), Event.LeftMouseButton, dir, -1);
+				EugClient.GetPlayer().getConnection().sendUDP(msg);
+			}
 		}else if(button == 1){
 		}
 		

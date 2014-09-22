@@ -18,4 +18,5 @@ public class SharedVars {
 	public static final boolean DEBUG_VERBOSE = true; //Turns on console printing
 	public static final boolean DEBUG_PHYSICS = true; //turns on box2ddbgrenderer
 	public static final boolean DEBUG_ENTITIES = false; //turns on aabb rendering
+	public static final int HISTORY_SIZE = 1000;
 }

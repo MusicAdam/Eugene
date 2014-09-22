@@ -1,6 +1,6 @@
 package com.gearworks.eug.shared.state;
 
-import com.gearworks.eug.shared.Utils;
+import com.gearworks.eug.shared.utils.Utils;
 
 /*
  * A snapshot contains all the information related to the state of the server at the time given.

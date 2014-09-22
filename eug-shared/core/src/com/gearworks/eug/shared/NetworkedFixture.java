@@ -5,6 +5,7 @@ import com.badlogic.gdx.physics.box2d.Filter;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.Shape;
 import com.badlogic.gdx.utils.Array;
+import com.gearworks.eug.shared.utils.Utils;
 
 public class NetworkedFixture {
 	long timestamp;

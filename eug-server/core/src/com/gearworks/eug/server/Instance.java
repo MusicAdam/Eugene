@@ -17,7 +17,6 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
-import com.gearworks.eug.shared.Utils;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
@@ -30,14 +29,15 @@ import com.gearworks.eug.shared.messages.UpdateMessage;
 import com.gearworks.eug.shared.messages.ClientInputMessage.Event;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.Snapshot;
+import com.gearworks.eug.shared.utils.Utils;
 
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot
+	//public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
 	
 	private int id;
-	private int time;
+	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
 	private Array<ServerPlayer> 	players;
 	private Array<Entity>	entities;
 	private World			world;
@@ -46,8 +46,6 @@ public class Instance {
 	private Box2DDebugRenderer b2ddbgRenderer; 
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
 	private Array<Integer> disconnectedPlayerIds;
-	
-	boolean test = true;
 	
 	public Instance(int id)
 	{
@@ -60,7 +58,7 @@ public class Instance {
 		serverPlayer = new ServerPlayer(-1);
 		serverPlayer.setInstanceId(id);
 		disconnectedPlayerIds = new Array<Integer>();
-		time = 0;
+		tick = 0;
 		
 		//Setup message handlers
 		/*
@@ -125,8 +123,8 @@ public class Instance {
 		//Generate a new snapshot if one is needed
 		Snapshot snapshot = null;
 		if(previousSnapshot == null || Utils.generateTimeStamp() - previousSnapshot.getTimestamp() >= SNAPSHOT_DELAY){ //Create new snapshot immediately if previous one is null.
-			snapshot = new Snapshot(id, time, getPlayerIds(), getDisconnectedPlayerIds(), getEntityStates());
-			time++;
+			snapshot = new Snapshot(id, tick, getPlayerIds(), getDisconnectedPlayerIds(), getEntityStates());
+			tick++;
 			
 			if(previousSnapshot == null){
 				previousSnapshot = snapshot;

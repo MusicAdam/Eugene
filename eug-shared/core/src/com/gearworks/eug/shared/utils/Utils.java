@@ -1,4 +1,4 @@
-package com.gearworks.eug.shared;
+package com.gearworks.eug.shared.utils;
 
 import java.util.ArrayList;
 
@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.gearworks.eug.shared.Entity;
 
 public class Utils {
 	public static float PI 				= (float)Math.PI;

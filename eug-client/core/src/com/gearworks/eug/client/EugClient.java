@@ -25,7 +25,6 @@ import com.gearworks.eug.shared.EntityFactory;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
-import com.gearworks.eug.shared.Utils;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
@@ -40,6 +39,7 @@ import com.gearworks.eug.shared.messages.UpdateMessage;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.state.StateManager;
+import com.gearworks.eug.shared.utils.Utils;
 
 /*
  * Kyro Client wrapper. Handles incoming messages, rendering and updates
