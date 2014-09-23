@@ -1,5 +1,6 @@
 package com.gearworks.eug.shared;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.utils.Array;
@@ -10,7 +11,7 @@ import com.gearworks.eug.shared.exceptions.EntityUpdateException;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
 
-public class EntityFactory {
+public class EntityManager {
 	private static Array<EntityEventListener> listeners;
 	
 	/*
@@ -59,7 +60,7 @@ public class EntityFactory {
 		Eug.Spawn(ent);
 		Eug.SetEntityState(null);
 		player.addEntity(ent);
-		UpdateToState(state);
+		SnapToState(state);
 		
 		for(EntityEventListener listener : listeners){
 			listener.onCreate(ent);
@@ -71,14 +72,14 @@ public class EntityFactory {
 	/*
 	 * Updates an already created (and spawned) entity to match the given state
 	 */
-	public static Entity UpdateToState(EntityState state) throws EntityUpdateException{//Overload for when an entity is not already known
+	public static Entity SnapToState(EntityState state) throws EntityUpdateException{//Overload for when an entity is not already known
 		Entity ent = Eug.FindEntityById(state.getId());
 		if(ent == null) throw new NullPointerException("Could not update entity " + state.getId() + ": Entity does not exist");
 		
-		return UpdateToState(state, ent);
+		return SnapToState(state, ent);
 	}
 		
-	public static Entity UpdateToState(EntityState state, Entity ent) throws EntityUpdateException{
+	public static Entity SnapToState(EntityState state, Entity ent) throws EntityUpdateException{
 		for(EntityEventListener listener : listeners){
 			listener.preUpdate(ent, state);
 		}
@@ -128,7 +129,7 @@ public class EntityFactory {
 		ent.body().setAngularDamping(bodyState.getAngularDamping());
 		ent.body().setAngularVelocity(bodyState.getAngularVelocity());
 		ent.body().setGravityScale(bodyState.getGravityScale());
-		ent.body().setLinearDamping(bodyState.getLinearDamping());
+		ent.body().setLinearDamping(bodyState.getLinearDamping());		
 		ent.body().setLinearVelocity(bodyState.getLinearVelocity());
 		ent.body().setMassData(bodyState.getMassData());
 		ent.body().setActive(bodyState.isActive());
@@ -143,5 +144,52 @@ public class EntityFactory {
 		}
 		
 		return ent;
+	}
+	
+	//Creates or destroys an entity based on its state
+	public static void UpdateToState(EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
+		Entity ent = Eug.FindEntityById(state.getId());
+		if(ent == null){ 
+			if(state.wasCreated())
+				ent = BuildFromState(state);
+			if(state.wasDestroyed())
+				throw new EntityBuildException("Can not destroy an entity that does not exist");
+			if(state.wasUpdated())
+				throw new EntityBuildException("Can not update an entity that does not exist");
+		}else if(ent != null){
+			//Trying to create entity that already exists
+			if(state.wasCreated())
+				throw new EntityUpdateException("Cannot create entity that already exists");
+			
+			if(state.wasUpdated()){
+				if(snap){
+					SnapToState(state, ent);
+				}else{
+					InterpolateToState(state, ent);
+				}
+			}else if(state.wasDestroyed()){
+				Eug.Destroy(ent);
+			}
+		}
+	}
+
+	public static void InterpolateToState(EntityState state, Entity ent) throws EntityUpdateException {
+		//current.position = previous.position + (target.position-previous.position) * tightness;
+		float distance = state.getBodyState().getTransform().getPosition().cpy().sub(ent.body().getPosition()).len(); 
+		if(distance > 1.0f || distance < .01f){
+			SnapToState(state, ent);
+		}else{
+			Vector2 currentPosition = ent.body().getPosition();
+			Vector2 targetPosition = state.getBodyState().getTransform().getPosition();
+			Vector2 smoothPos = currentPosition.cpy().add((targetPosition.cpy().sub(currentPosition)).scl(.1f));
+			
+			ent.body().setTransform(smoothPos, ent.body().getAngle());
+		}		
+	}
+
+	public static void SnapToState(EntityState[] entityStates) throws EntityUpdateException {
+		for(int i = 0; i < entityStates.length; i++){
+			SnapToState(entityStates[i]);
+		}
 	}
 }

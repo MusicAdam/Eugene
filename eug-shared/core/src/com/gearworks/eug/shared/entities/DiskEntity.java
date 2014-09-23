@@ -25,8 +25,8 @@ public class DiskEntity extends Entity {
 	private float impulseDelay			= .5f; //Delay between impulses in seconds;
 	private float timeSinceLastImpulse 	= impulseDelay; //Initialize with the delay so that an impulse can be applied immediately.
 	private Vector2 impulseDirection	= null;		//Impulse is applied in this direction when this is not null (requried to sync IO & box2d)
-	private float impulseMagnitude		= 1f;	//Magnitude of the impulse
-	private float drag					= 1f;
+	private float impulseMagnitude		= 1.2f;	//Magnitude of the impulse
+	private float drag					= 5f;
 	private float turnDelay				= .5f; //Delay between turns in seconds
 	private float timeSinceLastTurn		= turnDelay; 
 	private Vector2 turnToDirection		= null;

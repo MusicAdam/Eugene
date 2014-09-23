@@ -21,7 +21,7 @@ import com.gearworks.eug.client.state.GameState;
 import com.gearworks.eug.shared.Debug;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.EntityEventListener;
-import com.gearworks.eug.shared.EntityFactory;
+import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
@@ -204,8 +204,6 @@ public class EugClient extends Eug {
 			Matrix4 dbgMatrix = camera.combined.cpy().scl(SharedVars.BOX_TO_WORLD);
 			b2ddbgRenderer.render(world, dbgMatrix);
 		}
-		
-		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 	}
 	
 	@Override
@@ -344,5 +342,9 @@ public class EugClient extends Eug {
 		}
 		
 		return false;
+	}
+
+	public static int GetInstanceId() {
+		return EugClient.GetPlayer().getInstanceId();
 	}
 }

@@ -20,14 +20,15 @@ import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
-import com.gearworks.eug.shared.messages.ClientInputMessage;
+import com.gearworks.eug.shared.messages.InputSnapshot;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.UpdateMessage;
-import com.gearworks.eug.shared.messages.ClientInputMessage.Event;
+import com.gearworks.eug.shared.messages.InputSnapshot.Event;
 import com.gearworks.eug.shared.state.EntityState;
+import com.gearworks.eug.shared.state.ServerState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.Utils;
 
@@ -63,7 +64,7 @@ public class Instance {
 		//Setup message handlers
 		/*
 		 * TODO:This implementation is HORRIBLE. Right now, every instance received every message even if it isn't destined for that instance. 
-		 * 		These should be registered in EugServer, and then passed to each instance from there.
+		 * 		These should be registered in EugServer, and then passed to each instance from there. Or each instance should have its own Server instnace..
 		 */
 		final Instance thisInst = this;
 		EugServer.GetMessageRegistry().register(AssignInstanceMessage.class, new MessageCallback(){
@@ -89,10 +90,10 @@ public class Instance {
 					pl.setInitialized(true);				
 			}
 		});
-		EugServer.GetMessageRegistry().register(ClientInputMessage.class, new MessageCallback(){
+		EugServer.GetMessageRegistry().register(InputSnapshot.class, new MessageCallback(){
 			@Override
 			public void messageReceived(Connection c, Message msg){
-				thisInst.clientInputReceived(c, (ClientInputMessage) msg);			
+				thisInst.clientInputReceived(c, (InputSnapshot) msg);			
 			}
 		});
 	}
@@ -101,34 +102,28 @@ public class Instance {
 		EugServer.Spawn(new LevelBoundsEntity(entities.size, serverPlayer));
 	}
 	
-	protected void clientInputReceived(Connection c, ClientInputMessage msg) {
-		Player pl = findPlayerByConnection(c);
+	protected void clientInputReceived(Connection c, InputSnapshot msg) {
+		//ignore if input is from the future
+		if(msg.getSnapshot().getTick() > tick)
+			return;
+		
+		ServerPlayer pl = (ServerPlayer)findPlayerByConnection(c);
 		
 		if(pl == null) return;
 		
-		if(msg.getEvent() == Event.Key){
-			if(msg.getKey() == Input.Keys.SPACE){
-				((ServerPlayer)pl).getDisk().applyImpulse(msg.getInfoVector());
-			}
-		}else if(msg.getEvent() == Event.LeftMouseButton){
-			((ServerPlayer)pl).getDisk().turnTo(msg.getInfoVector());
-		}
+		pl.setInputSnapshot(msg);
+		msg.resolve(pl.getDisk());
 	}
 
 	public void update(){
+		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
+		
+		ServerState serverState = new ServerState(id, getPlayerIds(), getDisconnectedPlayerIds(), new Snapshot(id, getEntityStates()));
+		tick++;
+		
 		//Update entities
 		for(Entity e : entities){
 			e.update();
-		}
-		//Generate a new snapshot if one is needed
-		Snapshot snapshot = null;
-		if(previousSnapshot == null || Utils.generateTimeStamp() - previousSnapshot.getTimestamp() >= SNAPSHOT_DELAY){ //Create new snapshot immediately if previous one is null.
-			snapshot = new Snapshot(id, tick, getPlayerIds(), getDisconnectedPlayerIds(), getEntityStates());
-			tick++;
-			
-			if(previousSnapshot == null){
-				previousSnapshot = snapshot;
-			}
 		}
 		
 		for(int i = 0; i < players.size; i++){
@@ -144,8 +139,7 @@ public class Instance {
 				//
 				//Send Instance validation
 				if(!pl.isInitialized() && Utils.generateTimeStamp() - pl.getValidationTimestamp() >= VALIDATION_DELAY){
-					Snapshot useSnap = (snapshot == null) ? previousSnapshot : snapshot;
-					InitializeSceneMessage msg = new InitializeSceneMessage(id, useSnap);
+					InitializeSceneMessage msg = new InitializeSceneMessage(id, serverState);
 					pl.getConnection().sendUDP(msg);
 					pl.setValidationTimestamp(Utils.generateTimeStamp());
 					Debug.println("[Instance:update] [" + id + "] resending InitializeSceneMessage to player " + pl.getId() + ".");
@@ -160,10 +154,10 @@ public class Instance {
 					}
 					
 					//Send snapshot to each player
-					if(snapshot != null && pl.isValid()){
-						UpdateMessage msg = new UpdateMessage(snapshot);
+					if(pl.isValid()){
+						serverState.setInput(pl.getInputSnapshot());
+						UpdateMessage msg = new UpdateMessage(serverState);
 						pl.getConnection().sendUDP(msg);
-						previousSnapshot = snapshot;
 					}
 				}
 			}
@@ -181,7 +175,6 @@ public class Instance {
 			removePlayer(toRemove);
 		}
 		
-		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 	}
 	
 	public void render(){
@@ -197,7 +190,7 @@ public class Instance {
 	private EntityState[] getEntityStates(){
 		EntityState[] states = new EntityState[entities.size];
 		for(int i = 0; i < entities.size; i++){
-			states[i] = new EntityState(entities.get(i));
+			states[i] = entities.get(i).getState();
 		}
 		return states;
 	}

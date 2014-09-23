@@ -15,6 +15,7 @@ import com.gearworks.eug.shared.NetworkedFixture;
 import com.gearworks.eug.shared.NetworkedJoint;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
+import com.gearworks.eug.shared.state.ServerState;
 import com.gearworks.eug.shared.state.Snapshot;
 
 public class MessageRegistry {	
@@ -35,6 +36,7 @@ public class MessageRegistry {
 		kryo.register(BodyState.class);
 		kryo.register(EntityState.class);
 		kryo.register(EntityState[].class);
+		kryo.register(ServerState.class);
 		kryo.register(Snapshot.class);
 		kryo.register(NetworkedFixture.class);
 		kryo.register(NetworkedFixture[].class);
@@ -50,8 +52,8 @@ public class MessageRegistry {
 		kryo.register(Transform.class);
 		kryo.register(Entity.Type.class);
 		kryo.register(InitializeSceneMessage.class);
-		kryo.register(ClientInputMessage.class);
-		kryo.register(ClientInputMessage.Event.class);
+		kryo.register(InputSnapshot.class);
+		kryo.register(InputSnapshot.Event.class);
 		kryo.register(int[].class);
 		
 	}

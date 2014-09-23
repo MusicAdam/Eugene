@@ -52,6 +52,7 @@ public class Entity {
 	private boolean 	selected;
 	private Body body;
 	private Type type;
+	private boolean isNew = true;
 	
 	public Entity(int id, Player player){
 		this.player = player;
@@ -284,7 +285,13 @@ public class Entity {
 	}
 	
 	public EntityState getState(){
-		return new EntityState(this);
+		int status = EntityState.UPDATE;
+		if(isNew){
+			isNew = false;
+			status = EntityState.CREATE;
+		}
+		
+		return new EntityState(this, status);
 	}
 	
 	public void setId(int id){ this.id = id; }
@@ -301,4 +308,5 @@ public class Entity {
 		}
 	}
 	public void setType(Entity.Type type){ this.type = type; }
+	public boolean isNew(){ return isNew; }
 }
