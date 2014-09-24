@@ -2,6 +2,7 @@ package com.gearworks.eug.shared.state;
 
 import com.badlogic.gdx.physics.box2d.Transform;
 import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.utils.Utils;
 
 /*
@@ -56,5 +57,11 @@ public class EntityState {
 	public boolean wasCreated(){ return status == CREATE; }
 	public boolean wasUpdated(){ return status == UPDATE; }
 	public boolean wasDestroyed(){ return status == DESTROY; }
+
+	public static boolean Compare(EntityState correctedState, EntityState entState) {
+		float distance = correctedState.getBodyState().getTransform().getPosition().cpy().sub(entState.getBodyState().getTransform().getPosition()).len(); 
+		float angle = Math.abs(correctedState.getBodyState().getTransform().getRotation() - entState.getBodyState().getTransform().getRotation());
+		return (distance <= SharedVars.POSITION_TOLERANCE) && (angle <= SharedVars.ROTATION_TOLERANCE);
+	}
 	
 }

@@ -50,6 +50,7 @@ public class GameState implements State {
 	private EntityEventListener entityEventListener;
 	private long latency;
 	private CircularBuffer<InputSnapshot> inputHistory;
+	//private CircularBuffer<SnapshotHistory> snapshotHistory;
 	private int tick;
 	private Snapshot latestSnapshot;
 
@@ -76,11 +77,17 @@ public class GameState implements State {
 		entityEventListener = EntityManager.AddListener(new EntityEventListener(){
 			@Override
 			public void onCreate(Entity ent){
+				Debug.println("Created " + ent.getId());
 				if(ent instanceof DiskEntity){
 					if(ent.getPlayer() == EugClient.GetPlayer()){
 						EugClient.GetPlayer().setDisk((DiskEntity)ent);
 					}
 				}
+			}
+			
+			@Override
+			public void onDestroy(Entity ent){
+				Debug.println("Destroyed " + ent.getId());
 			}
 		});
 	}
@@ -153,7 +160,8 @@ public class GameState implements State {
 			}
 		}
 		
-		Eug.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
+		if(serverUpdateMessageIndex != -1)
+			Eug.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
 		tick++;
 		//Handle wrapping
@@ -209,7 +217,7 @@ public class GameState implements State {
 		for(int i = 0; i < snapshot.getEntityStates().length; i++){
 			try {
 				EntityState entState = snapshot.getEntityStates()[i];
-				if(entState.getPlayerId() == EugClient.GetPlayer().getId() && state.getInput() != null){
+				if(entState.getPlayerId() == EugClient.GetPlayer().getId() && state.getInput() != null && !inputHistory.isEmpty()){
 					//Apply correction
 					int tick = state.getInput().getTick();
 					int currentTick = getTick();
@@ -218,9 +226,9 @@ public class GameState implements State {
 					pruneOldHistory(state.getInput().getTick());
 					
 					//Set state to state at which input occured
-					System.out.println(inputHistory.peek());
 					EntityManager.SnapToState(inputHistory.peek().getSnapshot().getEntityStates());
 					
+					//Simulate from last input
 					while(tick < currentTick && !inputHistory.isEmpty()){
 						if(inputHistory.peek().getTick() == tick){
 							InputSnapshot input = inputHistory.pop();
@@ -228,18 +236,20 @@ public class GameState implements State {
 						}
 						//Simulate
 						EugClient.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-						tick++;
+						tick++;;
 					}
-					
 					correctedState = EugClient.GetPlayer().getDisk().getState();
+					
 					
 					//Revert back to current state
 					EntityManager.SnapToState(currentState.getEntityStates());
 					
 					//Interpolate current state to corrected state
-					EntityManager.InterpolateToState(correctedState, EugClient.GetPlayer().getDisk());					
+					if(!EntityState.Compare(correctedState, entState)){
+						EntityManager.InterpolateToState(correctedState, EugClient.GetPlayer().getDisk(), latency / SharedVars.STEP);	
+					}
 				}else{
-					EntityManager.UpdateToState(entState, true);					
+					EntityManager.UpdateToState(entState, false, latency / SharedVars.STEP);					
 				}
 			} catch (EntityBuildException e) {
 				// TODO Auto-generated catch block
@@ -288,7 +298,9 @@ public class GameState implements State {
 	}
 
 	private Snapshot generateSnapshot() {
-		return new Snapshot(EugClient.GetInstanceId(), getEntityStates());
+		Snapshot s = new Snapshot(EugClient.GetInstanceId(), getEntityStates());
+		s.setTick(getTick());
+		return s;
 	}
 	
 	public Snapshot getSnapshot(){

@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -68,11 +69,14 @@ public class EugClient extends Eug {
 	protected Snapshot previousSnapshot;
 	protected Snapshot targetSnapshot;
 	
+	private FPSLogger fps;
+	
 	/*
 	 * Overrides
 	 */
 	@Override
 	public void create () {	
+		fps = new FPSLogger();
 		ui = new UserInterface();
 		
 		Gdx.input.setInputProcessor(ui);
@@ -204,6 +208,7 @@ public class EugClient extends Eug {
 			Matrix4 dbgMatrix = camera.combined.cpy().scl(SharedVars.BOX_TO_WORLD);
 			b2ddbgRenderer.render(world, dbgMatrix);
 		}
+		//fps.log();
 	}
 	
 	@Override

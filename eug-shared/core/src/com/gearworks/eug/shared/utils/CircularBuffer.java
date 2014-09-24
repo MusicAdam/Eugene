@@ -73,11 +73,27 @@ public class CircularBuffer<T> {
 	public String toString(){
 		synchronized(lock){
 			String s = "";
+			int width = 0;
+			for(int i = 0; i < data.length; i++){
+				if(data[i] == null) continue;
+				if(data[i].toString().length() > width){
+					width = data[i].toString().length();
+				}
+			}
+			
+			width = width + 1; 
+			
 			for(int i = 0; i < data.length; i++){
 				if(data[i] == null){
-					s += "- ";
+					s += "-";
+					for(int j = 0; j < width - 1; j++){						
+						s += " ";
+					}
 				}else{
-					s += data[i].toString() + " ";
+					s += data[i].toString();
+					for(int j = 0; j < width - data[i].toString().length(); j++){						
+						s += " ";
+					}
 				}
 			}
 			
@@ -85,13 +101,16 @@ public class CircularBuffer<T> {
 			
 			for(int i = 0; i < data.length; i++){
 				if(tail == head && i == tail){
-					s += "^ ";
+					s += "^";
 				}else if(tail == i){
-					s += "T ";
+					s += "T";
 				}else if(head == i){
-					s += "H ";
+					s += "H";
 				}else{
-					s += "  ";
+					s += " ";
+				}
+				for(int j = 0; j < width - 1; j++){						
+					s += " ";
 				}
 			}
 			

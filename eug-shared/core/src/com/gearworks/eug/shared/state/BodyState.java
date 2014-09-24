@@ -23,7 +23,8 @@ public class BodyState {
 	private float gravityScale;
 	private float inertia;
 	private float linearDamping;
-	private Vector2 linearVelocity;
+	private float linearVelocityX;
+	private float linearVelocityY;
 	private MassData massData;
 	private boolean isActive;
 	private boolean isAwake;
@@ -42,7 +43,8 @@ public class BodyState {
 		toState.gravityScale = body.getGravityScale();
 		toState.inertia = body.getInertia();
 		toState.linearDamping = body.getLinearDamping();
-		toState.linearVelocity = body.getLinearVelocity();
+		toState.linearVelocityX = body.getLinearVelocity().x;
+		toState.linearVelocityY = body.getLinearVelocity().y;
 		toState.massData = body.getMassData();
 		toState.isActive = body.isActive();
 		toState.isAwake = body.isAwake();
@@ -95,7 +97,7 @@ public class BodyState {
 	}
 
 	public Vector2 getLinearVelocity() {
-		return linearVelocity;
+		return new Vector2(linearVelocityX, linearVelocityY);
 	}
 
 	public MassData getMassData() {

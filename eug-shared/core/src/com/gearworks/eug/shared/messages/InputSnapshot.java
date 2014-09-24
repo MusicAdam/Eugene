@@ -76,4 +76,18 @@ public class InputSnapshot extends Message {
 		}
 	}
 	
+	//For debug
+	@Override
+	public String toString(){
+		String append = "";
+		
+		if(event == Event.Key){
+			append += key + " " + getInfoVector();
+		}else{
+			append += getInfoVector();
+		}
+		
+		return "<[" + getTick() + "] " + event + " " + append + ">";
+	}
+	
 }

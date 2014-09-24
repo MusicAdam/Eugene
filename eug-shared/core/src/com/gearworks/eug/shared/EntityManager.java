@@ -3,6 +3,7 @@ package com.gearworks.eug.shared;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.Transform;
 import com.badlogic.gdx.utils.Array;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
@@ -21,12 +22,20 @@ public class EntityManager {
 		if(listeners == null)
 			listeners = new Array<EntityEventListener>();
 		listeners.add(listener);
+		System.out.println("REGISTERED ENT LISTENER");
 		return listener;
 	}
 	
 	public static void RemoveListener(EntityEventListener listener){
 		if(listeners == null) return;
 		listeners.removeValue(listener, true);
+	}
+	
+	public static void EntityDestroyed(Entity ent){
+		if(listeners == null) return;
+		for(EntityEventListener listener : listeners){
+			listener.onDestroy(ent);
+		}
 	}
 	
 	/*
@@ -129,11 +138,12 @@ public class EntityManager {
 		ent.body().setAngularDamping(bodyState.getAngularDamping());
 		ent.body().setAngularVelocity(bodyState.getAngularVelocity());
 		ent.body().setGravityScale(bodyState.getGravityScale());
-		ent.body().setLinearDamping(bodyState.getLinearDamping());		
-		ent.body().setLinearVelocity(bodyState.getLinearVelocity());
+		ent.body().setLinearDamping(bodyState.getLinearDamping());	
+		if(!ent.body().getLinearVelocity().equals(bodyState.getLinearVelocity()))
+			ent.body().setLinearVelocity(bodyState.getLinearVelocity());
 		ent.body().setMassData(bodyState.getMassData());
-		ent.body().setActive(bodyState.isActive());
-		ent.body().setAwake(bodyState.isAwake());
+		//ent.body().setActive(bodyState.isActive());
+		//ent.body().setAwake(bodyState.isAwake());
 		ent.body().setBullet(bodyState.isBullet());
 		ent.body().setFixedRotation(bodyState.isFixedRotation());
 		ent.body().setSleepingAllowed(bodyState.isSleepingAllowed());
@@ -147,44 +157,43 @@ public class EntityManager {
 	}
 	
 	//Creates or destroys an entity based on its state
-	public static void UpdateToState(EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
+	public static void UpdateToState(EntityState state, boolean snap, float a) throws EntityBuildException, EntityUpdateException{
 		Entity ent = Eug.FindEntityById(state.getId());
 		if(ent == null){ 
-			if(state.wasCreated())
-				ent = BuildFromState(state);
-			if(state.wasDestroyed())
-				throw new EntityBuildException("Can not destroy an entity that does not exist");
-			if(state.wasUpdated())
-				throw new EntityBuildException("Can not update an entity that does not exist");
+			ent = BuildFromState(state);
 		}else if(ent != null){
-			//Trying to create entity that already exists
-			if(state.wasCreated())
-				throw new EntityUpdateException("Cannot create entity that already exists");
-			
-			if(state.wasUpdated()){
-				if(snap){
-					SnapToState(state, ent);
-				}else{
-					InterpolateToState(state, ent);
-				}
-			}else if(state.wasDestroyed()){
-				Eug.Destroy(ent);
+			if(snap){
+				SnapToState(state, ent);
+			}else{
+				InterpolateToState(state, ent, a);
 			}
 		}
 	}
+	
+	public static void UpdateToState(EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
+		UpdateToState(state, snap, 0);
+	}
 
-	public static void InterpolateToState(EntityState state, Entity ent) throws EntityUpdateException {
-		//current.position = previous.position + (target.position-previous.position) * tightness;
+	public static void InterpolateToState(EntityState state, Entity ent, float a) throws EntityUpdateException {
+		if(ent.body().getPosition().equals(state.getBodyState().getTransform().getPosition())) return;
+		
 		float distance = state.getBodyState().getTransform().getPosition().cpy().sub(ent.body().getPosition()).len(); 
-		if(distance > 1.0f || distance < .01f){
-			SnapToState(state, ent);
-		}else{
+		if(distance < SharedVars.FORCE_POSITION_SNAP_LIMIT && distance > SharedVars.POSITION_TOLERANCE){
 			Vector2 currentPosition = ent.body().getPosition();
 			Vector2 targetPosition = state.getBodyState().getTransform().getPosition();
-			Vector2 smoothPos = currentPosition.cpy().add((targetPosition.cpy().sub(currentPosition)).scl(.1f));
+			Vector2 smoothPos = currentPosition.cpy().add((targetPosition.cpy().sub(currentPosition)).scl(SharedVars.POSITION_TOLERANCE * a));
 			
-			ent.body().setTransform(smoothPos, ent.body().getAngle());
+			state.getBodyState().getTransform().setPosition(smoothPos);
 		}		
+		
+		float deltaAngle = Math.abs(state.getBodyState().getTransform().getRotation() - ent.body().getAngle());
+		if(deltaAngle < SharedVars.FORCE_ROTATION_SNAP_LIMIT && deltaAngle > SharedVars.ROTATION_TOLERANCE){
+			float smoothAngle = ent.body().getAngle() + deltaAngle * (SharedVars.ROTATION_TOLERANCE * a);
+			
+			state.getBodyState().getTransform().setRotation(smoothAngle);
+		}
+		
+		SnapToState(state, ent);
 	}
 
 	public static void SnapToState(EntityState[] entityStates) throws EntityUpdateException {

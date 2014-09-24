@@ -35,7 +35,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	//public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
+	public static long SNAPSHOT_DELAY  = 0; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
@@ -43,10 +43,10 @@ public class Instance {
 	private Array<Entity>	entities;
 	private World			world;
 	private Queue<ServerPlayer> 	removePlayerQueue;
-	private Snapshot previousSnapshot;
 	private Box2DDebugRenderer b2ddbgRenderer; 
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
 	private Array<Integer> disconnectedPlayerIds;
+	private ServerState previousState;
 	
 	public Instance(int id)
 	{
@@ -104,7 +104,7 @@ public class Instance {
 	
 	protected void clientInputReceived(Connection c, InputSnapshot msg) {
 		//ignore if input is from the future
-		if(msg.getSnapshot().getTick() > tick)
+		if(msg.getTick() > tick)
 			return;
 		
 		ServerPlayer pl = (ServerPlayer)findPlayerByConnection(c);
@@ -119,12 +119,15 @@ public class Instance {
 		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
 		ServerState serverState = new ServerState(id, getPlayerIds(), getDisconnectedPlayerIds(), new Snapshot(id, getEntityStates()));
+		if(previousState == null) previousState = serverState;
 		tick++;
 		
 		//Update entities
 		for(Entity e : entities){
 			e.update();
 		}
+		
+		boolean snapshotSent = false;
 		
 		for(int i = 0; i < players.size; i++){
 			ServerPlayer pl = players.get(i);
@@ -155,17 +158,25 @@ public class Instance {
 					
 					//Send snapshot to each player
 					if(pl.isValid()){
-						serverState.setInput(pl.getInputSnapshot());
-						UpdateMessage msg = new UpdateMessage(serverState);
-						pl.getConnection().sendUDP(msg);
+						if((Utils.generateTimeStamp() - previousState.getTimestamp()) >= SNAPSHOT_DELAY){ //(90 + Math.random() * 110) <- random latency in average latency range
+							serverState.setInput(pl.getInputSnapshot());
+							UpdateMessage msg = new UpdateMessage(serverState);
+							pl.getConnection().sendUDP(msg);
+							pl.setInputSnapshot(null);
+							snapshotSent = true;
+						}
 					}
 				}
-			}
+			}			
 			
 			//Check for disconnected players
 			if(pl.isDisconnected()){
 				removePlayerQueue.add(pl);
 			}
+		}
+		
+		if(snapshotSent){
+			previousState = serverState;
 		}
 		
 		//Remove disconnected players

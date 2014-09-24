@@ -42,6 +42,7 @@ public class Eug extends ApplicationAdapter{
 	protected void destroy(Entity ent){ throw new NotImplementedException(); }
 	public static void Destroy(Entity ent)
 	{
+		EntityManager.EntityDestroyed(ent);
 		Get().destroy(ent);
 	}
 

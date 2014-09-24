@@ -26,7 +26,7 @@ public class DiskEntity extends Entity {
 	private float timeSinceLastImpulse 	= impulseDelay; //Initialize with the delay so that an impulse can be applied immediately.
 	private Vector2 impulseDirection	= null;		//Impulse is applied in this direction when this is not null (requried to sync IO & box2d)
 	private float impulseMagnitude		= 1.2f;	//Magnitude of the impulse
-	private float drag					= 5f;
+	private float drag					= 500000f;
 	private float turnDelay				= .5f; //Delay between turns in seconds
 	private float timeSinceLastTurn		= turnDelay; 
 	private Vector2 turnToDirection		= null;
@@ -129,8 +129,9 @@ public class DiskEntity extends Entity {
 		
 		FixtureDef fix = new FixtureDef();
 		fix.shape = unitShape;
+		fix.density = 1.0f;
 		fix.friction = 0.1f;
-		fix.restitution = 0f;
+		fix.restitution = .6f;
 		
 		Fixture fixture = body().createFixture(fix);
 		fixture.setUserData(this);
