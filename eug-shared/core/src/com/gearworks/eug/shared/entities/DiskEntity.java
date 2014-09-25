@@ -137,6 +137,7 @@ public class DiskEntity extends Entity {
 		fixture.setUserData(this);
 		
 		unitShape.dispose();
+		super.spawn();
 	}
 	
 	//This function only checks the angle of the point relative to the position of the body. It does not check that the point is contained within a bodies' fixture

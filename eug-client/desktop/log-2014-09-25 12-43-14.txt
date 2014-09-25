@@ -1,0 +1,7 @@
+[GameState:dispose] Runtime:	1645
+[GameState:dispose] Average frame time:	0.05957447
+
+Entity Iterations:	0
+Avg Entity iterations/Frame:	0
+Average FPS:	11
+Total Frames:	50

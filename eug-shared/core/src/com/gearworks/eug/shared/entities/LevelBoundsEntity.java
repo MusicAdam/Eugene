@@ -54,7 +54,9 @@ public class LevelBoundsEntity extends Entity {
 		rightLine.set(screenWidth, 0, screenWidth, screenHeight);
 		
 		lineDef.shape = rightLine;
-		body().createFixture(lineDef);		
+		body().createFixture(lineDef);
+		
+		super.spawn();
 	}
 
 }

@@ -84,6 +84,7 @@ public class UserInterface implements InputProcessor{
 				state.storeMove(input);
 				input.resolve(EugClient.GetPlayer().getDisk());
 				EugClient.GetPlayer().getConnection().sendUDP(input);
+				System.out.println("UI Thread: " + Thread.currentThread().getName());
 			}
 		}else if(button == 1){
 		}

@@ -1,6 +1,7 @@
 package com.gearworks.eug.server;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -253,7 +254,7 @@ public class EugServer extends Eug {
 	}
 
 	@Override
-	public Array<Entity> getEntities() {
+	public Map<Integer, Entity> getEntities() {
 		throw new NotImplementedException();
 	}
 	

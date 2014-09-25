@@ -38,6 +38,7 @@ public class StateManager {
 			state.onEnter();
 		}else if(state != null && state.canExitState() && toState.canEnterState()){
 			state.onExit();
+			state.dispose();
 			state = toState;
 			state.onEnter();
 		}else{
@@ -45,6 +46,11 @@ public class StateManager {
 		}
 		
 		return true;
+	}
+	
+	public void dispose(){
+		if(state == null) return;
+		state.dispose();
 	}
 	
 	public State state(){ return state; }

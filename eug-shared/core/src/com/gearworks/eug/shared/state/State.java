@@ -10,4 +10,5 @@ public interface State {
 	public void render();
 	public void update();
 	public int getId();
+	public void dispose();
 }

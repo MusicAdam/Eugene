@@ -17,9 +17,10 @@ public class SharedVars {
 	public static final int OBJECT_BUFFER_SIZE = 4096;
 	
 	public static final boolean DEBUG_VERBOSE = true; //Turns on console printing
-	public static final boolean DEBUG_PHYSICS = false; //turns on box2ddbgrenderer
+	public static final boolean DEBUG_PHYSICS = true; //turns on box2ddbgrenderer
 	public static final boolean DEBUG_ENTITIES = false; //turns on aabb rendering
-	public static final int HISTORY_SIZE = 10;
+	public static final boolean DEBUG_LOG = true;	//Enables log file writing
+	public static final int HISTORY_SIZE = 1000;
 	
 	public static final float POSITION_TOLERANCE = .1f; //The distance the client can be out of sync before it forces correction
 	public static final float ROTATION_TOLERANCE = Utils.degToRad(5); //The angle the client can be out of sync before it forces correction

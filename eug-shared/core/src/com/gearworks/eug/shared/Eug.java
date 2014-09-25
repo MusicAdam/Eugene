@@ -1,5 +1,7 @@
 package com.gearworks.eug.shared;
 
+import java.util.Map;
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
@@ -15,6 +17,9 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  */
 public class Eug extends ApplicationAdapter{
 	private static Eug singleton;
+	public Object playerLock = new Object();
+	public Object messageLock = new Object();
+	public Object entityLock = new Object();
 	
 	public static Eug Get()
 	{
@@ -53,8 +58,8 @@ public class Eug extends ApplicationAdapter{
 	}
 	
 
-	protected Array<Entity> getEntities(){ throw new NotImplementedException(); }
-	public static Array<Entity> GetEntities()
+	protected Map<Integer, Entity> getEntities(){ throw new NotImplementedException(); }
+	public static Map<Integer, Entity> GetEntities()
 	{
 		return Get().getEntities();
 	}

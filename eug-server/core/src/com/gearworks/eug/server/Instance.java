@@ -35,7 +35,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	public static long SNAPSHOT_DELAY  = 0; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
+	public static long SNAPSHOT_DELAY  = 500; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
@@ -93,6 +93,7 @@ public class Instance {
 		EugServer.GetMessageRegistry().register(InputSnapshot.class, new MessageCallback(){
 			@Override
 			public void messageReceived(Connection c, Message msg){
+				System.out.println("Received input");
 				thisInst.clientInputReceived(c, (InputSnapshot) msg);			
 			}
 		});
@@ -102,7 +103,7 @@ public class Instance {
 		EugServer.Spawn(new LevelBoundsEntity(entities.size, serverPlayer));
 	}
 	
-	protected void clientInputReceived(Connection c, InputSnapshot msg) {
+	protected void clientInputReceived(Connection c, InputSnapshot msg) {		
 		//ignore if input is from the future
 		if(msg.getTick() > tick)
 			return;
@@ -116,11 +117,12 @@ public class Instance {
 	}
 
 	public void update(){
+		tick++;
 		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
 		ServerState serverState = new ServerState(id, getPlayerIds(), getDisconnectedPlayerIds(), new Snapshot(id, getEntityStates()));
+		serverState.getSnapshot().setTick(tick);
 		if(previousState == null) previousState = serverState;
-		tick++;
 		
 		//Update entities
 		for(Entity e : entities){

@@ -1,0 +1,5 @@
+
+Entity Iterations:	0
+Avg Entity iterations/Frame:	0
+Average FPS:	27
+Total Frames:	222

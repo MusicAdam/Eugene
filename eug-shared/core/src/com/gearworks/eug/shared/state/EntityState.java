@@ -59,6 +59,7 @@ public class EntityState {
 	public boolean wasDestroyed(){ return status == DESTROY; }
 
 	public static boolean Compare(EntityState correctedState, EntityState entState) {
+		if(correctedState == null || entState == null) return false;
 		float distance = correctedState.getBodyState().getTransform().getPosition().cpy().sub(entState.getBodyState().getTransform().getPosition()).len(); 
 		float angle = Math.abs(correctedState.getBodyState().getTransform().getRotation() - entState.getBodyState().getTransform().getRotation());
 		return (distance <= SharedVars.POSITION_TOLERANCE) && (angle <= SharedVars.ROTATION_TOLERANCE);

@@ -1,5 +1,7 @@
 package com.gearworks.eug.client;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -46,6 +48,7 @@ import com.gearworks.eug.shared.utils.Utils;
  * Kyro Client wrapper. Handles incoming messages, rendering and updates
  */
 public class EugClient extends Eug {	
+	public static final String 	UPDATE_THREAD = "update";
 	public static final int 	V_WIDTH = 800;
 	public static final	int 	V_HEIGHT = 800;
 	
@@ -59,9 +62,11 @@ public class EugClient extends Eug {
 	private ClientPlayer player;
 	private UserInterface ui;
 	protected StateManager sm;
-	protected Array<Entity> entities;
+	protected Map<Integer, Entity> entities;
 	protected World world;
 	protected Queue<QueuedMessageWrapper> messageQueue;
+	protected Queue<Entity> spawnQueue;
+	protected Queue<Entity> destroyQueue;
 	protected MessageRegistry messageRegistry;
 	protected EntityState entityState;
 	protected Array<ClientPlayer> otherPlayers; //These are other players connected to the server
@@ -69,14 +74,19 @@ public class EugClient extends Eug {
 	protected Snapshot previousSnapshot;
 	protected Snapshot targetSnapshot;
 	
-	private FPSLogger fps;
+	protected Thread updateThread;
+	protected boolean doUpdate = true;;
+	
+	private int dbg_entSearchCount;	
+	private int dbg_entSearchSum = 0;	
+	private int dbg_frameCount = 0;	
+	private int dbg_fpsSum = 0;
 	
 	/*
 	 * Overrides
 	 */
 	@Override
 	public void create () {	
-		fps = new FPSLogger();
 		ui = new UserInterface();
 		
 		Gdx.input.setInputProcessor(ui);
@@ -92,6 +102,7 @@ public class EugClient extends Eug {
 		MessageRegistry.Initialize(client.getKryo()); //Register messages
 		client.start();
 		otherPlayers = new Array<ClientPlayer>();
+		dbg_entSearchCount = 0;
 		
 		/*
 		 * Initialize renderer
@@ -104,13 +115,16 @@ public class EugClient extends Eug {
 		batch = new SpriteBatch();
 		shapeRenderer = new ShapeRenderer();
 		
+		spawnQueue = new ConcurrentLinkedQueue<Entity>();
+		destroyQueue = new ConcurrentLinkedQueue<Entity>();
+		
 		/*
 		 * Initialize states		
 		 */
 		sm = new StateManager();
 		sm.setState(new ConnectState()); //Set initial state
 		
-		entities = new Array<Entity>();
+		entities = new HashMap<Integer, Entity>();
 		
 		/*
 		 * Initialize physics
@@ -118,6 +132,27 @@ public class EugClient extends Eug {
 		world = new World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
 		//world.setContactListener(new ContactHandler());
 		b2ddbgRenderer = new Box2DDebugRenderer();
+		
+		updateThread = new Thread(new Runnable(){
+			@Override
+			public void run() {
+				while(doUpdate){
+					accum += Gdx.graphics.getDeltaTime();
+					while(accum >= SharedVars.STEP) {
+						accum -= SharedVars.STEP;
+						//Handle queued messages
+						QueuedMessageWrapper message;
+						while((message = messageQueue.poll()) != null)
+							parseServerMessage(message.connection, message.message);
+							
+						sm.update();
+						//interpolateToTargetSnapshot();
+					}
+				}
+			}		
+		});
+		updateThread.setName(UPDATE_THREAD);
+		//updateThread.start();
 	}
 	
 	//TODO: This doesn't work
@@ -167,18 +202,22 @@ public class EugClient extends Eug {
 	}
 
 	private synchronized static Array<ClientPlayer> GetOtherPlayers() {
-		return ((EugClient)Get()).otherPlayers;
+		synchronized(Get().playerLock){
+			return ((EugClient)Get()).otherPlayers;
+		}
 	}
 
 	@Override
 	public void render () {
 		/*
-		 * Handle update logic (should be moved to a separate thread)
+		 * Handle update logic 
 		 */
+		
+		dbg_entSearchCount = 0;
+		
 		accum += Gdx.graphics.getDeltaTime();
 		while(accum >= SharedVars.STEP) {
 			accum -= SharedVars.STEP;
-			
 			//Handle queued messages
 			QueuedMessageWrapper message;
 			while((message = messageQueue.poll()) != null)
@@ -187,6 +226,12 @@ public class EugClient extends Eug {
 			sm.update();
 			//interpolateToTargetSnapshot();
 		}
+		
+		while(!spawnQueue.isEmpty())
+			spawn(spawnQueue.poll());
+		while(!destroyQueue.isEmpty())
+			destroy(destroyQueue.poll());
+		
 		
 		/*
 		 * Handle render logic
@@ -197,6 +242,7 @@ public class EugClient extends Eug {
 
 		batch.setProjectionMatrix(camera.combined);
 		shapeRenderer.setProjectionMatrix(camera.combined);
+		
 		try{
 			sm.render();
 		}catch(NullPointerException e){
@@ -208,7 +254,12 @@ public class EugClient extends Eug {
 			Matrix4 dbgMatrix = camera.combined.cpy().scl(SharedVars.BOX_TO_WORLD);
 			b2ddbgRenderer.render(world, dbgMatrix);
 		}
+		
 		//fps.log();
+		dbg_entSearchSum += dbg_entSearchCount;
+		dbg_frameCount++;
+		if(Gdx.graphics.getFramesPerSecond() > 0)
+			dbg_fpsSum += Gdx.graphics.getFramesPerSecond();
 	}
 	
 	@Override
@@ -219,7 +270,21 @@ public class EugClient extends Eug {
 	
 	public void parseServerMessage(Connection c, Message message)
 	{
-		messageRegistry.invoke(message.getClass(), c, message);
+		synchronized(messageLock){
+			messageRegistry.invoke(message.getClass(), c, message);
+		}
+	}
+	
+	@Override
+	public void dispose(){
+		sm.dispose();
+		doUpdate = false;
+		Debug.log("");
+		Debug.log("Entity Iterations:\t" + dbg_entSearchSum);
+		Debug.log("Avg Entity iterations/Frame:\t" + dbg_entSearchSum/dbg_frameCount);
+		Debug.log("Average FPS:\t" + dbg_fpsSum/dbg_frameCount);
+		Debug.log("Total Frames:\t" + dbg_frameCount);
+		Debug.closeLog();
 	}
 	
 	/*
@@ -256,29 +321,46 @@ public class EugClient extends Eug {
 		return ((EugClient)Get()).camera;
 	}
 	
-	public synchronized static void QueueMessage(QueuedMessageWrapper m){
-		((EugClient)Get()).messageQueue.add(m);
+	public static void QueueMessage(QueuedMessageWrapper m){
+		synchronized(Get().messageLock){
+			((EugClient)Get()).messageQueue.add(m);
+		}
 	}
 	
 	
-	public synchronized static MessageRegistry GetMessageRegistry()
+	public static MessageRegistry GetMessageRegistry()
 	{
-		return ((EugClient)Get()).messageRegistry;
-	}
-	
-	@Override
-	protected synchronized Entity spawn(Entity ent)
-	{
-		entities.add(ent);
-		ent.spawn();
-		return ent;
+		synchronized(Get().messageLock){
+			return ((EugClient)Get()).messageRegistry;
+		}
 	}
 	
 	@Override
-	protected synchronized void destroy(Entity ent)
+	protected Entity spawn(Entity ent)
 	{
-		ent.dispose();
-		entities.removeValue(ent, true);
+		if(Thread.currentThread().getName().equals(UPDATE_THREAD)){
+			spawnQueue.add(ent);
+			return ent;
+		}else{
+			synchronized(entityLock){
+				entities.put(ent.getId(), ent);
+				ent.spawn();
+				return ent;
+			}
+		}
+	}
+	
+	@Override
+	protected void destroy(Entity ent)
+	{
+		if(Thread.currentThread().getName().equals(UPDATE_THREAD)){
+			destroyQueue.add(ent);
+		}else{
+			synchronized(entityLock){
+				ent.dispose();
+				entities.remove(ent.getId());
+			}
+		}
 	}
 	
 	@Override
@@ -294,8 +376,10 @@ public class EugClient extends Eug {
 	}
 
 	@Override
-	public synchronized Array<Entity> getEntities() {
-		return entities;
+	public Map<Integer, Entity> getEntities() {
+		synchronized(entityLock){
+			return entities;
+		}
 	}
 
 	public static void SetPlayer(ClientPlayer clientPlayer) {
@@ -303,24 +387,24 @@ public class EugClient extends Eug {
 	}
 	
 	@Override
-	public synchronized Entity findEntityById(int id){
-		for(Entity e : entities){
-			if(e.getId() == id)
-				return e;
+	public Entity findEntityById(int id){	
+		synchronized(entityLock){
+			dbg_entSearchCount++;
+			return entities.get(id);
 		}
-		
-		return null;
 	}
 	
 	@Override
-	public synchronized Player findPlayerById(int id){
-		if(id == player.getId()) return player;
-		
-		for(int i = 0; i < otherPlayers.size; i++)
-			if(otherPlayers.get(i).getId() == id) 
-				return otherPlayers.get(i);
-		
-		return null;
+	public Player findPlayerById(int id){
+		synchronized(playerLock){
+			if(id == player.getId()) return player;
+			
+			for(int i = 0; i < otherPlayers.size; i++)
+				if(otherPlayers.get(i).getId() == id) 
+					return otherPlayers.get(i);
+			
+			return null;
+		}
 	}
 	
 	@Override
@@ -341,12 +425,7 @@ public class EugClient extends Eug {
 	
 	@Override
 	protected boolean entityExists(int id){
-		for(int i =0; i < entities.size; i++){
-			if(id == entities.get(i).getId())
-				return true;
-		}
-		
-		return false;
+		return entities.containsKey(id);
 	}
 
 	public static int GetInstanceId() {

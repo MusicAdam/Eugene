@@ -64,12 +64,10 @@ public class EntityManager {
 			default:
 				throw new EntityBuildException("Could not build entity " + state.getId() + ": Unknown entity type given.");
 		}
-		
-		Eug.SetEntityState(state);
+
+		ent.setSpawnState(state);
 		Eug.Spawn(ent);
-		Eug.SetEntityState(null);
 		player.addEntity(ent);
-		SnapToState(state);
 		
 		for(EntityEventListener listener : listeners){
 			listener.onCreate(ent);
@@ -93,60 +91,7 @@ public class EntityManager {
 			listener.preUpdate(ent, state);
 		}
 		
-		//Update entity's owner
-		if(ent.getPlayer().getId() != state.getPlayerId()){
-			Player player = Eug.FindPlayerById(state.getPlayerId());
-			
-			if(player == null) throw new EntityUpdateException("Could not update entity " + state.getId() + ": New player " + state.getPlayerId() + " doesn't exist");
-			
-			ent.setPlayer(player);
-		}
-		
-		//Update sprite
-		if(ent.getSpriteResource() != state.getSpriteResource()){
-			ent.setSprite(state.getSpriteResource());
-		}
-		
-		//Update fixtures
-		//TODO: I don't think this method of id'ing will work (need to set it in UserData probably)
-		//TODO: Will not destroy fixtures if they no longer exist... related to ^^
-		for(NetworkedFixture nFix : state.getBodyState().getFixtureList()){
-			try{
-				Fixture fix = ent.body().getFixtureList().get(nFix.getId());
-				fix.setDensity(nFix.getDensity());
-				fix.setFilterData(nFix.getFilterData());
-				fix.setFriction(nFix.getFriction());
-				fix.setRestitution(nFix.getRestitution());
-			}catch(IndexOutOfBoundsException e){//Create it if it doesn't exist
-				FixtureDef fixDef = new FixtureDef();
-				fixDef.friction = nFix.getFriction();
-				fixDef.density = nFix.getDensity();
-				fixDef.restitution = nFix.getRestitution();
-				fixDef.shape = nFix.getShape();
-				
-				Fixture fix = ent.body().createFixture(fixDef);
-				fix.setFilterData(nFix.getFilterData());
-			}
-		}
-		
-		//TODO: Update joints
-		
-		//Apply general physics state
-		BodyState bodyState = state.getBodyState();
-		
-		ent.body().setTransform(bodyState.getTransform().getPosition(), bodyState.getTransform().getRotation());
-		ent.body().setAngularDamping(bodyState.getAngularDamping());
-		ent.body().setAngularVelocity(bodyState.getAngularVelocity());
-		ent.body().setGravityScale(bodyState.getGravityScale());
-		ent.body().setLinearDamping(bodyState.getLinearDamping());	
-		if(!ent.body().getLinearVelocity().equals(bodyState.getLinearVelocity()))
-			ent.body().setLinearVelocity(bodyState.getLinearVelocity());
-		ent.body().setMassData(bodyState.getMassData());
-		//ent.body().setActive(bodyState.isActive());
-		//ent.body().setAwake(bodyState.isAwake());
-		ent.body().setBullet(bodyState.isBullet());
-		ent.body().setFixedRotation(bodyState.isFixedRotation());
-		ent.body().setSleepingAllowed(bodyState.isSleepingAllowed());
+		ent.snapToState(state);
 		
 
 		for(EntityEventListener listener : listeners){
@@ -171,7 +116,7 @@ public class EntityManager {
 	}
 	
 	public static void UpdateToState(EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
-		UpdateToState(state, snap, 0);
+		UpdateToState(state, snap, 1);
 	}
 
 	public static void InterpolateToState(EntityState state, Entity ent, float a) throws EntityUpdateException {
@@ -181,14 +126,14 @@ public class EntityManager {
 		if(distance < SharedVars.FORCE_POSITION_SNAP_LIMIT && distance > SharedVars.POSITION_TOLERANCE){
 			Vector2 currentPosition = ent.body().getPosition();
 			Vector2 targetPosition = state.getBodyState().getTransform().getPosition();
-			Vector2 smoothPos = currentPosition.cpy().add((targetPosition.cpy().sub(currentPosition)).scl(SharedVars.POSITION_TOLERANCE * a));
-			
+			Vector2 smoothPos = currentPosition.cpy().add((targetPosition.cpy().sub(currentPosition).scl(SharedVars.POSITION_TOLERANCE)));
+			System.out.println((a) + ": " + currentPosition + " -> " + targetPosition + " = " + smoothPos);
 			state.getBodyState().getTransform().setPosition(smoothPos);
 		}		
 		
 		float deltaAngle = Math.abs(state.getBodyState().getTransform().getRotation() - ent.body().getAngle());
 		if(deltaAngle < SharedVars.FORCE_ROTATION_SNAP_LIMIT && deltaAngle > SharedVars.ROTATION_TOLERANCE){
-			float smoothAngle = ent.body().getAngle() + deltaAngle * (SharedVars.ROTATION_TOLERANCE * a);
+			float smoothAngle = ent.body().getAngle() + deltaAngle * (SharedVars.ROTATION_TOLERANCE);
 			
 			state.getBodyState().getTransform().setRotation(smoothAngle);
 		}

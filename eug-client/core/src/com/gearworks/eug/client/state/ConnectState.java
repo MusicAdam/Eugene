@@ -70,4 +70,8 @@ public class ConnectState implements State {
 		return 0;
 	}
 
+	@Override
+	public void dispose() {		
+	}
+
 }

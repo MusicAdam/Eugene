@@ -29,4 +29,16 @@ public class Snapshot {
 	public void setTick(int tick){ this.tick = tick; }
 	public long getTimestamp(){ return timestamp; }
 	public EntityState[] getEntityStates() { return entityStates; }
+
+	/*
+	 * NOTE: Efficiency can be increased by created a hashmap while iterating entityStates to associate id's with indices.
+	 * 		probably only worth it if we are expecting to have a lot of entities.
+	 */
+	public EntityState getEntityState(int id) {
+		for(int i = 0; i < entityStates.length; i++){
+			if(entityStates[i].getId() == id)
+				return entityStates[i];
+		}
+		return null;
+	}
 }
