@@ -1,6 +1,8 @@
 package com.gearworks.eug.client;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -187,7 +189,7 @@ public class EugClient extends Eug {
 			if(pl  != null){
 				pl.dispose();
 				EugClient.GetOtherPlayers().removeValue((ClientPlayer)pl, true);
-				Debug.println("[EugClient:serverUpdate] Player " + disconnectedPlayers[i] + " diconnected");
+				Debug.println("[EugClient:UpdatePlayers] Player " + disconnectedPlayers[i] + " diconnected");
 			}
 		}
 		//Update players
@@ -196,7 +198,7 @@ public class EugClient extends Eug {
 			if(Eug.FindPlayerById(playerId) == null){
 				ClientPlayer pl = new ClientPlayer(playerId);
 				EugClient.GetOtherPlayers().add(pl);
-				Debug.println("[EugClient:serverUpdate] Player " + playerId + " connected");
+				Debug.println("[EugClient:UpdatePlayers] Player " + playerId + " connected");
 			}
 		}
 	}
@@ -271,7 +273,13 @@ public class EugClient extends Eug {
 	public void parseServerMessage(Connection c, Message message)
 	{
 		synchronized(messageLock){
-			messageRegistry.invoke(message.getClass(), c, message);
+			Class<?> klass = message.getClass();
+			
+			for(int i = 0; i < message.getInheritanceLevel(); i++){
+				klass = klass.getSuperclass();
+			}
+			
+			messageRegistry.invoke(klass, c, message);
 		}
 	}
 	
@@ -430,5 +438,15 @@ public class EugClient extends Eug {
 
 	public static int GetInstanceId() {
 		return EugClient.GetPlayer().getInstanceId();
+	}
+	
+	@Override 
+	protected List<Player> getPlayers(){
+		ArrayList<Player> players = new ArrayList<Player>();
+		players.add(player);
+		for(Player pl : otherPlayers){
+			players.add(pl);
+		}
+		return players;
 	}
 }

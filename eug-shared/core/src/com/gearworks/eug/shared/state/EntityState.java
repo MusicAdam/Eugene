@@ -21,6 +21,16 @@ public class EntityState {
 	private BodyState bodyState; //The state of the body in the physical world. NUll if none exists
 	private int status;				//-1 = destroyed, 0 = update, 1 = created
 	
+	public static EntityState GenerateTestState(Entity ent){
+		EntityState state = new EntityState();
+		state.id = ent.getId();
+		state.playerId = ent.getPlayer().getId();
+		state.bodyState = BodyState.GenerateTestState(ent);
+		state.spriteResource = ent.getSpriteResource();
+		state.type = ent.getType();
+		return state;
+	}
+	
 	public EntityState(){
 		timestamp = Utils.generateTimeStamp();
 		id = -1;
@@ -45,7 +55,16 @@ public class EntityState {
 		this.type = ent.getType();
 		this.status = status;
 	}
-
+	
+	public EntityState(EntityState cpy){
+		this.timestamp = cpy.timestamp;
+		this.id = cpy.id;
+		this.playerId = cpy.playerId;		
+		this.bodyState = new BodyState(cpy.bodyState);		
+		this.spriteResource = cpy.spriteResource;
+		this.type = cpy.type;
+		this.status = cpy.status;		
+	}
 
 
 	public long getTimestamp() { return timestamp; }
@@ -59,9 +78,15 @@ public class EntityState {
 	public boolean wasDestroyed(){ return status == DESTROY; }
 
 	public static boolean Compare(EntityState correctedState, EntityState entState) {
-		if(correctedState == null || entState == null) return false;
+		if(correctedState == null || entState == null)
+			return false;
+		
 		float distance = correctedState.getBodyState().getTransform().getPosition().cpy().sub(entState.getBodyState().getTransform().getPosition()).len(); 
 		float angle = Math.abs(correctedState.getBodyState().getTransform().getRotation() - entState.getBodyState().getTransform().getRotation());
+		//System.out.println(entState.id + ":");
+		//System.out.println("\tPos: " + correctedState.getBodyState().getTransform().getPosition() + ", " + entState.getBodyState().getTransform().getPosition());
+		//System.out.println("\tDist: " + (distance <= SharedVars.POSITION_TOLERANCE));
+		//System.out.println("\tAngle: " + (angle <= SharedVars.ROTATION_TOLERANCE));
 		return (distance <= SharedVars.POSITION_TOLERANCE) && (angle <= SharedVars.ROTATION_TOLERANCE);
 	}
 	

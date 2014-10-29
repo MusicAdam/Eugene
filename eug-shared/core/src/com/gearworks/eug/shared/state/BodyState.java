@@ -1,5 +1,6 @@
 package com.gearworks.eug.shared.state;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.MassData;
@@ -7,6 +8,7 @@ import com.badlogic.gdx.physics.box2d.Transform;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.NetworkedFixture;
 import com.gearworks.eug.shared.NetworkedJoint;
+import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.utils.Utils;
 
 /*
@@ -34,6 +36,34 @@ public class BodyState {
 	private NetworkedFixture[] fixtureList;
 	private NetworkedJoint[] jointList;
 	
+	public static BodyState GenerateTestState(Entity ent){
+		Transform t = new Transform();
+		t.setPosition(new Vector2((Gdx.graphics.getWidth()/2) * SharedVars.WORLD_TO_BOX,  (Gdx.graphics.getHeight()/2) * SharedVars.WORLD_TO_BOX));
+		t.setRotation(0);
+		
+		Body body = ent.body();
+		BodyState toState = new BodyState();
+		toState.id = ent.getId();
+		toState.transform = t;
+		toState.angularDamping = body.getAngularDamping();
+		toState.angularVelocity = body.getAngularVelocity();
+		toState.gravityScale = body.getGravityScale();
+		toState.inertia = body.getInertia();
+		toState.linearDamping = body.getLinearDamping();
+		toState.linearVelocityX = 1.2f;
+		toState.linearVelocityY = 1.2f;
+		toState.massData = body.getMassData();
+		toState.isActive = body.isActive();
+		toState.isAwake = body.isAwake();
+		toState.isBullet = body.isBullet();
+		toState.isFixedRotation = body.isFixedRotation();
+		toState.isSleepingAllowed = body.isSleepingAllowed();
+		
+		toState.fixtureList = NetworkedFixture.GenerateList(body);
+		toState.jointList = NetworkedJoint.GenerateList(ent);
+		return toState;
+	}
+	
 	public static void FromEntity(Entity ent, BodyState toState){
 		Body body = ent.body();
 		toState.id = ent.getId();
@@ -58,6 +88,36 @@ public class BodyState {
 	
 	public BodyState(){
 		timestamp = Utils.generateTimeStamp();
+	}
+	
+	public BodyState(BodyState cpy){
+		this.transform = new Transform();
+		this.transform.vals[0] = cpy.transform.vals[0];
+		this.transform.vals[1] = cpy.transform.vals[1];
+		this.transform.vals[2] = cpy.transform.vals[2];
+		this.transform.vals[3] = cpy.transform.vals[3];
+		this.id = cpy.id;
+		this.angularDamping = cpy.angularDamping;
+		this.angularVelocity = cpy.angularVelocity;
+		this.gravityScale = cpy.gravityScale;
+		this.inertia = cpy.inertia;
+		this.linearDamping = cpy.linearDamping;
+		this.linearVelocityX = cpy.linearVelocityX;
+		this.linearVelocityY = cpy.linearVelocityY;
+		this.massData = new MassData();
+		this.massData.mass = cpy.massData.mass;
+		this.massData.center.x = cpy.massData.center.x;
+		this.massData.center.y = cpy.massData.center.y;
+		this.massData.I = cpy.massData.I;
+		this.isBullet = cpy.isBullet;
+		this.isFixedRotation = cpy.isFixedRotation;
+		this.isSleepingAllowed = cpy.isSleepingAllowed;
+		this.isActive = cpy.isActive;
+		this.isAwake = cpy.isAwake;
+		
+		this.fixtureList = cpy.fixtureList.clone();
+		this.jointList = cpy.jointList.clone();
+		
 	}
 
 	public long getTimestamp() {

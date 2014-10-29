@@ -13,6 +13,9 @@ import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.NetworkedFixture;
 import com.gearworks.eug.shared.NetworkedJoint;
+import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.ImpulseInput;
+import com.gearworks.eug.shared.input.TurnInput;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.ServerState;
@@ -52,8 +55,10 @@ public class MessageRegistry {
 		kryo.register(Transform.class);
 		kryo.register(Entity.Type.class);
 		kryo.register(InitializeSceneMessage.class);
-		kryo.register(InputSnapshot.class);
-		kryo.register(InputSnapshot.Event.class);
+		kryo.register(ClientInput.class);
+		kryo.register(ClientInput.Event.class);
+		kryo.register(ImpulseInput.class);
+		kryo.register(TurnInput.class);
 		kryo.register(int[].class);
 		
 	}

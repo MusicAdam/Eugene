@@ -1,6 +1,11 @@
 package com.gearworks.eug.shared.utils;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.TimeZone;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -154,6 +159,10 @@ public class Utils {
 	
 	public static long generateTimeStamp(){
 		return System.currentTimeMillis();
+	}
+	
+	public static String timeToString(long time){
+		return new Date(time).toString();
 	}
 
 }

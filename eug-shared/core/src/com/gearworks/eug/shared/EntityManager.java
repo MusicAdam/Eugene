@@ -1,5 +1,8 @@
 package com.gearworks.eug.shared;
 
+import java.util.Iterator;
+import java.util.Map;
+
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
@@ -9,11 +12,23 @@ import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
+import com.gearworks.eug.shared.input.ClientInput;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
+import com.gearworks.eug.shared.state.Snapshot;
+import com.gearworks.eug.shared.utils.CircularBuffer;
 
 public class EntityManager {
 	private static Array<EntityEventListener> listeners;
+	
+	public static void SnapToTestState(Entity ent){
+		try {
+			ent.snapToState(EntityState.GenerateTestState(ent));
+		} catch (EntityUpdateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	
 	/*
 	 * Factory listeners to hook into entity creation/updates
@@ -144,6 +159,132 @@ public class EntityManager {
 	public static void SnapToState(EntityState[] entityStates) throws EntityUpdateException {
 		for(int i = 0; i < entityStates.length; i++){
 			SnapToState(entityStates[i]);
+		}
+	}
+	
+	public static Snapshot SimulateTo(Snapshot from, Snapshot to, CircularBuffer<ClientInput> inputHistory, CircularBuffer<Snapshot> snapshotHistory, Snapshot current)
+	{		
+		//Snap world to initial state
+		try {
+			SynchronizeEntities(from);
+			EntityManager.SnapToState(from.getEntityStates());
+		} catch (EntityUpdateException e) {
+			e.printStackTrace();
+		}
+		
+		long time = from.getTimestamp(); //State at the time of the from snapshot
+		int inpInc = 0;					
+		int snpInc = 0;
+		while(time < to.getTimestamp()){//Simulate to time of the to snapshot
+			if(!snapshotHistory.isEmpty()){
+				while(snapshotHistory.peek(inpInc).getTimestamp() < time){
+					SynchronizeEntities(snapshotHistory.peek(snpInc));
+					snpInc++;
+				}
+			}
+			
+			if(!inputHistory.isEmpty()){
+				while(inputHistory.peek(inpInc).getTimestamp() < time){
+					ClientInput input = inputHistory.peek(inpInc);
+					input.resolve();
+					inpInc++;
+				}
+			}
+			
+			Eug.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
+			time += SharedVars.STEP * 100;
+		}
+		
+		Snapshot simulatedState = GenerateSnapshot(current.getInstanceId()); //Save simulated state to return later
+		try {
+			SnapToState(current.getEntityStates());
+		} catch (EntityUpdateException e) {
+			e.printStackTrace();
+		} //Snap back to current state
+		return simulatedState; //Return simulated state
+	}
+	
+	public static Snapshot GenerateSnapshot(int instanceId) {
+		int[] playerIds = new int[Eug.GetPlayers().size()];
+		int i = 0;
+		for(Player pl : Eug.GetPlayers()){
+			playerIds[i] = pl.getId();
+			i++;
+		}
+		Snapshot s = new Snapshot(instanceId, playerIds, GetEntityStates());
+		return s;
+	}
+	
+	public static EntityState[] GetEntityStates() {
+		EntityState[] states = new EntityState[Eug.GetEntities().entrySet().size()];
+		Iterator entIt = Eug.GetEntities().entrySet().iterator();
+		int i = 0;
+		while(entIt.hasNext())
+		{ 
+			Map.Entry<Integer, Entity> pairs = (Map.Entry<Integer, Entity>)entIt.next();
+			pairs.getValue().update();
+			states[i] = pairs.getValue().getState();
+			i++;
+		}
+		
+		return states;
+	}
+	
+	//Ensures entities that exists/dne in the given snap are in the same state in the world.
+	public static void SynchronizeEntities(Snapshot snap){
+		int worldEntityCount = Eug.GetEntities().size();
+		int snapEntityCount = snap.getEntityStates().length;
+		
+		if(worldEntityCount == snapEntityCount){
+			Array<Integer> existingIds = new Array<Integer>();
+			//Check that entities that exist in snap are also the ones that exist in the world. else create/destroy them
+			for(int i = 0; i < snapEntityCount; i++){
+				EntityState entState = snap.getEntityStates()[i];
+				
+				if(!Eug.EntityExists(entState.getId())){
+					try {
+						EntityManager.BuildFromState(entState);
+					} catch (EntityBuildException e) {
+						e.printStackTrace();
+					} catch (EntityUpdateException e) {
+						e.printStackTrace();
+					}
+				}else{
+					existingIds.add(entState.getId());
+				}
+			}
+			
+			for(Entity ent : Eug.GetEntities().values()){
+				if(existingIds.contains(ent.id, false)) continue;
+				
+				Eug.Destroy(ent);
+			}
+		}else if(worldEntityCount > snapEntityCount){ //Some entities need to be deleted
+			int differences = worldEntityCount - snapEntityCount;
+			for(Entity ent : Eug.GetEntities().values()){
+				if(snap.getEntityState(ent.getId()) == null){
+					Eug.Destroy(ent);
+					differences--;
+				}
+				
+				if(differences == 0)
+					break;
+				
+			}
+		}else{ //Some entities need to be created
+			for(int i = 0; i < snapEntityCount; i++){
+				EntityState entState = snap.getEntityStates()[i];
+				
+				if(!Eug.EntityExists(entState.getId())){
+					try {
+						EntityManager.BuildFromState(entState);
+					} catch (EntityBuildException e) {
+						e.printStackTrace();
+					} catch (EntityUpdateException e) {
+						e.printStackTrace();
+					}
+				}
+			}
 		}
 	}
 }

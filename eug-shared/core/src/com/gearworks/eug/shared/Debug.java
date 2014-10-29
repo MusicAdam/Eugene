@@ -25,6 +25,7 @@ public class Debug {
 	}
 	
 	public static void log(String msg){
+		if(!SharedVars.DEBUG_LOG) return;
 		if(writer == null){
 			try {
 				writer = new PrintWriter("log-" + (new SimpleDateFormat("yyyy-MM-dd HH-mm-ss").format(new Date())) + ".txt", "UTF-8");
@@ -39,6 +40,7 @@ public class Debug {
 	}
 	
 	public static void closeLog(){
+		if(!SharedVars.DEBUG_LOG) return;
 		if(writer != null)
 			writer.close();
 	}

@@ -1,5 +1,6 @@
 package com.gearworks.eug.shared;
 
+import java.util.List;
 import java.util.Map;
 
 import com.badlogic.gdx.ApplicationAdapter;
@@ -100,5 +101,10 @@ public class Eug extends ApplicationAdapter{
 	protected boolean entityExists(int id){ throw new NotImplementedException(); }
 	public static boolean EntityExists(int id) {
 		return Get().entityExists(id);
+	}
+	
+	protected List<Player> getPlayers(){ throw new NotImplementedException(); }
+	public static List<Player> GetPlayers(){
+		return Get().getPlayers();
 	}
 }

@@ -3,6 +3,9 @@ package com.gearworks.eug.shared;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.entities.DiskEntity;
+import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.ImpulseInput;
+import com.gearworks.eug.shared.input.TurnInput;
 
 /*
  * TODO: Make player class serializable so that it can be sent in messages
@@ -17,6 +20,7 @@ public class Player {
 	private long	validationTimestamp; 	//Last time AssignInstanceMessage was sent
 	private boolean isInitialized = false;			//True when the initial snapshot has been successfully sent to the player
 	private Array<Entity> entities;
+	private DiskEntity myDisk; 
 	private boolean isDisconnected = false; //When true player will be removed from idle players/instances
 	
 	public Player(int id){
@@ -75,6 +79,24 @@ public class Player {
 	public void removeEntity(Entity e){
 		if(entities.removeValue(e, true)){
 			e.setPlayer(null);
+		}
+	}
+	
+	public void setDisk(DiskEntity disk){
+		myDisk = disk;
+	}
+	
+	public DiskEntity getDisk(){ 
+		return myDisk;
+	}
+	
+	public void processInput(ClientInput input) {
+		if(getDisk() == null) return;
+		
+		if(input instanceof ImpulseInput){
+			getDisk().applyImpulse(input.getInfoVector());			
+		}else if(input instanceof TurnInput){
+			getDisk().turnTo(input.getInfoVector());
 		}
 	}
 }

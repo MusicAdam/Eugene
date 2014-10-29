@@ -12,9 +12,12 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.gearworks.eug.client.state.GameState;
 import com.gearworks.eug.shared.Entity;
+import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
-import com.gearworks.eug.shared.messages.InputSnapshot;
-import com.gearworks.eug.shared.messages.InputSnapshot.Event;
+import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.ClientInput.Event;
+import com.gearworks.eug.shared.input.ImpulseInput;
+import com.gearworks.eug.shared.input.TurnInput;
 
 public class UserInterface implements InputProcessor{	
 	public boolean debug_showContacts = true;
@@ -48,11 +51,13 @@ public class UserInterface implements InputProcessor{
 				//EugClient.GetPlayer().getDisk().applyImpulse(dir);
 				
 				GameState state = (GameState)Eug.GetStateManager().state();
-				InputSnapshot input = new InputSnapshot(EugClient.GetPlayer().getInstanceId(), state.getSnapshot(), Event.Key, dir, Input.Keys.SPACE);
+				ClientInput input = new ImpulseInput(EugClient.GetPlayer().getId(), Event.Key, dir, Input.Keys.SPACE);
 				state.storeMove(input);
-				input.resolve(EugClient.GetPlayer().getDisk());
+				input.resolve();
 				EugClient.GetPlayer().getConnection().sendUDP(input);
 			}
+		}else if(keycode == Input.Keys.D){
+			EntityManager.SnapToTestState(EugClient.GetPlayer().getDisk());
 		}
 		return false;
 	}
@@ -80,11 +85,10 @@ public class UserInterface implements InputProcessor{
 				Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
 	
 				GameState state = (GameState)Eug.GetStateManager().state();
-				InputSnapshot input = new InputSnapshot(EugClient.GetPlayer().getInstanceId(), state.getSnapshot(), Event.LeftMouseButton, dir, -1);
+				ClientInput input = new TurnInput(EugClient.GetPlayer().getId(), Event.LeftMouseButton, dir, -1);
 				state.storeMove(input);
-				input.resolve(EugClient.GetPlayer().getDisk());
+				input.resolve();
 				EugClient.GetPlayer().getConnection().sendUDP(input);
-				System.out.println("UI Thread: " + Thread.currentThread().getName());
 			}
 		}else if(button == 1){
 		}

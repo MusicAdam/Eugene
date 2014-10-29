@@ -19,14 +19,14 @@ import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
+import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.ClientInput.Event;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
-import com.gearworks.eug.shared.messages.InputSnapshot;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.UpdateMessage;
-import com.gearworks.eug.shared.messages.InputSnapshot.Event;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.ServerState;
 import com.gearworks.eug.shared.state.Snapshot;
@@ -35,7 +35,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	public static long SNAPSHOT_DELAY  = 500; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
+	public static long SNAPSHOT_DELAY  = 100; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
@@ -47,9 +47,10 @@ public class Instance {
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
 	private Array<Integer> disconnectedPlayerIds;
 	private ServerState previousState;
-	
+
 	public Instance(int id)
 	{
+		System.out.println("Instance created at: " + Utils.timeToString(Utils.generateTimeStamp()));
 		this.id = id;
 		b2ddbgRenderer = new Box2DDebugRenderer();
 		removePlayerQueue = new ConcurrentLinkedQueue<ServerPlayer>();
@@ -90,11 +91,11 @@ public class Instance {
 					pl.setInitialized(true);				
 			}
 		});
-		EugServer.GetMessageRegistry().register(InputSnapshot.class, new MessageCallback(){
+		EugServer.GetMessageRegistry().register(ClientInput.class, new MessageCallback(){
 			@Override
 			public void messageReceived(Connection c, Message msg){
 				System.out.println("Received input");
-				thisInst.clientInputReceived(c, (InputSnapshot) msg);			
+				thisInst.clientInputReceived(c, (ClientInput) msg);			
 			}
 		});
 	}
@@ -103,7 +104,7 @@ public class Instance {
 		EugServer.Spawn(new LevelBoundsEntity(entities.size, serverPlayer));
 	}
 	
-	protected void clientInputReceived(Connection c, InputSnapshot msg) {		
+	protected void clientInputReceived(Connection c, ClientInput msg) {		
 		//ignore if input is from the future
 		if(msg.getTick() > tick)
 			return;
@@ -113,15 +114,15 @@ public class Instance {
 		if(pl == null) return;
 		
 		pl.setInputSnapshot(msg);
-		msg.resolve(pl.getDisk());
+		msg.resolve();
 	}
 
 	public void update(){
 		tick++;
 		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
-		ServerState serverState = new ServerState(id, getPlayerIds(), getDisconnectedPlayerIds(), new Snapshot(id, getEntityStates()));
-		serverState.getSnapshot().setTick(tick);
+		ServerState serverState = new ServerState(id, getPlayerIds(), getDisconnectedPlayerIds(), new Snapshot(id, getPlayerIds(), getEntityStates()));
+		serverState.getSnapshot().setServerTick(tick);
 		if(previousState == null) previousState = serverState;
 		
 		//Update entities
@@ -145,7 +146,7 @@ public class Instance {
 				//Send Instance validation
 				if(!pl.isInitialized() && Utils.generateTimeStamp() - pl.getValidationTimestamp() >= VALIDATION_DELAY){
 					InitializeSceneMessage msg = new InitializeSceneMessage(id, serverState);
-					pl.getConnection().sendUDP(msg);
+					msg.sendUDP(pl.getConnection());
 					pl.setValidationTimestamp(Utils.generateTimeStamp());
 					Debug.println("[Instance:update] [" + id + "] resending InitializeSceneMessage to player " + pl.getId() + ".");
 				//
@@ -163,7 +164,7 @@ public class Instance {
 						if((Utils.generateTimeStamp() - previousState.getTimestamp()) >= SNAPSHOT_DELAY){ //(90 + Math.random() * 110) <- random latency in average latency range
 							serverState.setInput(pl.getInputSnapshot());
 							UpdateMessage msg = new UpdateMessage(serverState);
-							pl.getConnection().sendUDP(msg);
+							msg.sendUDP(pl.getConnection());
 							pl.setInputSnapshot(null);
 							snapshotSent = true;
 						}
@@ -265,7 +266,7 @@ public class Instance {
 	public void sendAssignInstanceMessage(ServerPlayer pl){
 		AssignInstanceMessage msg = new AssignInstanceMessage(id, -1);
 		pl.setValidationTimestamp(Utils.generateTimeStamp());
-		pl.getConnection().sendUDP(msg);
+		msg.sendUDP(pl.getConnection());
 	}
 	
 	public boolean isFull(){ return players.size == MAX_PLAYERS; }

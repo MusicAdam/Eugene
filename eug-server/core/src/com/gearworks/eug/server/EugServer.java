@@ -156,7 +156,13 @@ public class EugServer extends Eug {
 	
 	public void parseClientMessage(Connection c, Message message)
 	{
-		messageRegistry.invoke(message.getClass(), c, message);
+		Class<?> klass = message.getClass();
+		
+		for(int i = 0; i < message.getInheritanceLevel(); i++){
+			klass = klass.getSuperclass();
+		}
+		
+		messageRegistry.invoke(klass, c, message);
 	}
 	
 	@Override
