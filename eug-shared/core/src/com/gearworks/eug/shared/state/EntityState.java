@@ -83,7 +83,7 @@ public class EntityState {
 		
 		float distance = correctedState.getBodyState().getTransform().getPosition().cpy().sub(entState.getBodyState().getTransform().getPosition()).len(); 
 		float angle = Math.abs(correctedState.getBodyState().getTransform().getRotation() - entState.getBodyState().getTransform().getRotation());
-		//System.out.println(entState.id + ":");
+		//System.out.println(correctedState.id + ":" + entState.id);
 		//System.out.println("\tPos: " + correctedState.getBodyState().getTransform().getPosition() + ", " + entState.getBodyState().getTransform().getPosition());
 		//System.out.println("\tDist: " + (distance <= SharedVars.POSITION_TOLERANCE));
 		//System.out.println("\tAngle: " + (angle <= SharedVars.ROTATION_TOLERANCE));

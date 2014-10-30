@@ -4,6 +4,7 @@ import java.nio.Buffer;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Transform;
 import com.badlogic.gdx.utils.BufferUtils;
@@ -55,6 +56,10 @@ public class GameState implements State {
 	private CircularBuffer<Snapshot> snapshotHistory;
 	private int tick;
 	private Snapshot latestSnapshot;
+	private Snapshot latestServerSnapshot;
+	private Snapshot latestSimulatedSnapshot;
+	private int forceResetLimit = 2; //Updates until we decide correction has failed and we need to snap to server state.
+	private int forceResetCount = 0; //Number of updates we remain out of sync
 	
 	private long startTime;
 	private long endTime;
@@ -97,7 +102,7 @@ public class GameState implements State {
 			
 			@Override
 			public void onDestroy(Entity ent){
-				//Debug.println("Destroyed " + ent.getId());
+				System.out.println("Destroyed entity " + ent.getId() + " at " + Utils.generateTimeStamp());
 			}
 		});
 	}
@@ -129,6 +134,20 @@ public class GameState implements State {
 				Map.Entry<Integer, Entity> pairs = (Map.Entry<Integer, Entity>)entIt.next();
 				pairs.getValue().render(EugClient.GetSpriteBatch(), EugClient.GetShapeRenderer());
 			}
+		}
+		
+		if(latestServerSnapshot != null){
+			Color old = EugClient.GetSpriteBatch().getColor();
+			EugClient.GetSpriteBatch().setColor(1, 0, 0, .8f);
+			latestServerSnapshot.render(EugClient.GetSpriteBatch());
+			EugClient.GetSpriteBatch().setColor(old);
+		}
+		
+		if(latestSimulatedSnapshot != null){
+			Color old = EugClient.GetSpriteBatch().getColor();
+			EugClient.GetSpriteBatch().setColor(0, 1, 0, .8f);
+			latestSimulatedSnapshot.render(EugClient.GetSpriteBatch());
+			EugClient.GetSpriteBatch().setColor(old);
 		}
 	}
 
@@ -200,6 +219,7 @@ public class GameState implements State {
 		
 		Snapshot snapshot = msg.getState().getSnapshot();		
 		tick = snapshot.getServerTick();
+		latestServerSnapshot = snapshot;
 		
 		EugClient.UpdatePlayers(msg.getState().getPlayerIds(), msg.getState().getDisconnectedPlayers());
 		
@@ -229,6 +249,7 @@ public class GameState implements State {
 		
 		ServerState state = msg.getState();
 		Snapshot serverSnapshot = state.getSnapshot();
+		latestServerSnapshot = serverSnapshot;
 		
 		latency = msg.getTravelTime();
 
@@ -247,7 +268,6 @@ public class GameState implements State {
 		}
 		
 		
-				
 		Snapshot simulatedState = null;
 		Snapshot localSnapshot = snapshotHistory.peek(); 
 		
@@ -256,37 +276,31 @@ public class GameState implements State {
 			localSnapshot = getLatestSnapshot(); //If we are in sync with the server, get the latest snapshot instead.
 		}
 		
-			
-		System.out.println("Local closest snapshot time: " + Utils.timeToString(localSnapshot.getTimestamp()));
-		System.out.println("Server snapshot time: " + Utils.timeToString(serverSnapshot.getTimestamp()));
-		
+		if(localSnapshot.getTimestamp() < serverSnapshot.getTimestamp()){
+			localSnapshot = EntityManager.SimulateTo(localSnapshot, serverSnapshot.getTimestamp(), inputHistory, snapshotHistory, getLatestSnapshot());
+		}else if(localSnapshot.getTimestamp() > serverSnapshot.getTimestamp()){
+			serverSnapshot = EntityManager.SimulateTo(serverSnapshot, localSnapshot.getTimestamp(), inputHistory, snapshotHistory, getLatestSnapshot());
+		}
 		if(Snapshot.Compare(serverSnapshot, localSnapshot)){
 			//System.out.println("CLIENT/SERVER ARE REASONABLY IN SYNC");
-		}else{
-			System.out.println("CLIENT/SERVER OUT OF SYNC");
-			if(localSnapshot.getTimestamp() > serverSnapshot.getTimestamp()){
-				//If we are ahead of the server, simulate the server state to our current state, and compare.
-				simulatedState = EntityManager.SimulateTo(serverSnapshot, localSnapshot, inputHistory, snapshotHistory, getLatestSnapshot());
-			}else if(localSnapshot.getTimestamp() < serverSnapshot.getTimestamp()){
-				//If we are behind the server, simulate our state to the server's state and compare.
-				simulatedState = EntityManager.SimulateTo(serverSnapshot, localSnapshot, inputHistory, snapshotHistory, getLatestSnapshot());
-				
-			}else{
-				//If we are equal to the server state compare current state.
-				simulatedState = getLatestSnapshot();
-			}
+			forceResetCount = 0;
+		}else{		
+			simulatedState = EntityManager.SimulateTo(serverSnapshot, getLatestSnapshot().getTimestamp(), inputHistory, snapshotHistory, getLatestSnapshot());
 			
-			try {
-				EntityManager.SnapToState(simulatedState.getEntityStates());
-			} catch (EntityUpdateException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+			if(simulatedState != null){
+				if(!Snapshot.Compare(simulatedState, getLatestSnapshot())){
+					latestSimulatedSnapshot = simulatedState;
+					try {
+						EntityManager.SynchronizeEntities(simulatedState);
+						EntityManager.SnapToState(simulatedState.getEntityStates());
+						forceResetCount++;
+					} catch (EntityUpdateException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
 			}
 		}
-		
-		
-		
-		
 						
 		/*
 		for(int i = 0; i < serverSnapshot.getEntityStates().length; i++){

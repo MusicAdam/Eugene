@@ -130,6 +130,12 @@ public class EntityManager {
 		}
 	}
 	
+	public static void UpdateToState(EntityState[] states, boolean snap, float a) throws EntityBuildException, EntityUpdateException{ 
+		for(EntityState state : states){
+			UpdateToState(state, snap, a);
+		}
+	}
+	
 	public static void UpdateToState(EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
 		UpdateToState(state, snap, 1);
 	}
@@ -162,7 +168,7 @@ public class EntityManager {
 		}
 	}
 	
-	public static Snapshot SimulateTo(Snapshot from, Snapshot to, CircularBuffer<ClientInput> inputHistory, CircularBuffer<Snapshot> snapshotHistory, Snapshot current)
+	public static Snapshot SimulateTo(Snapshot from, long toTime, CircularBuffer<ClientInput> inputHistory, CircularBuffer<Snapshot> snapshotHistory, Snapshot current)
 	{		
 		//Snap world to initial state
 		try {
@@ -175,7 +181,11 @@ public class EntityManager {
 		long time = from.getTimestamp(); //State at the time of the from snapshot
 		int inpInc = 0;					
 		int snpInc = 0;
-		while(time < to.getTimestamp()){//Simulate to time of the to snapshot
+		float step = SharedVars.STEP * 1000;
+		while(time < toTime){//Simulate to time of the to snapshot
+			if(time + step > toTime){
+				step = toTime - time;
+			}
 			if(!snapshotHistory.isEmpty()){
 				while(snapshotHistory.peek(inpInc).getTimestamp() < time){
 					SynchronizeEntities(snapshotHistory.peek(snpInc));
@@ -191,16 +201,18 @@ public class EntityManager {
 				}
 			}
 			
-			Eug.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-			time += SharedVars.STEP * 100;
+			Eug.GetWorld().step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
+			time += step;
 		}
 		
 		Snapshot simulatedState = GenerateSnapshot(current.getInstanceId()); //Save simulated state to return later
 		try {
+			SynchronizeEntities(current);
 			SnapToState(current.getEntityStates());
 		} catch (EntityUpdateException e) {
 			e.printStackTrace();
 		} //Snap back to current state
+		simulatedState.setTimestamp(time);
 		return simulatedState; //Return simulated state
 	}
 	

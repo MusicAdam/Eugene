@@ -1,6 +1,12 @@
 package com.gearworks.eug.shared.state;
 
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
+import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Player;
+import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.input.ClientInput;
 import com.gearworks.eug.shared.utils.Utils;
 
@@ -14,6 +20,15 @@ public class Snapshot {
 	private int serverTick; //  "             "  server  "              "   
 	private EntityState[] entityStates; //The states for all the entitites in this instance
 	private int[] playerIds; //Players who are connected
+	
+	public static Snapshot GenerateDefaultSnapshot(Entity ent){
+		Snapshot s = new Snapshot();
+		s.instanceId = 0;
+		s.timestamp = Utils.generateTimeStamp();
+		s.entityStates = new EntityState[]{EntityState.GenerateTestState(ent)};
+		s.playerIds = new int[]{ent.getPlayer().getId()};
+		return s;
+	}
 	
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
@@ -69,5 +84,23 @@ public class Snapshot {
 				return false;
 		}
 		return true;
+	}
+	
+	public void render(SpriteBatch batch){
+		for(EntityState state : entityStates){
+			if(state.getSpriteResource() != null){
+				Texture tex = new Texture(state.getSpriteResource());
+				Vector2 pos = state.getBodyState().getTransform().getPosition().scl(SharedVars.BOX_TO_WORLD);
+				float rot = state.getBodyState().getTransform().getRotation();
+				
+				batch.begin();
+				batch.draw(tex, pos.x - tex.getWidth()/2, pos.y - tex.getHeight()/2, 0, 0, tex.getWidth(), tex.getHeight(), 1, 1, rot, 0, 0, tex.getWidth(), tex.getHeight(), false, false);
+				batch.end();
+			}
+		}
+	}
+
+	public void setTimestamp(long time) {
+		timestamp = time;
 	}
 }
