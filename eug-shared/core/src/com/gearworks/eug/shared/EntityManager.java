@@ -170,6 +170,7 @@ public class EntityManager {
 	
 	public static Snapshot SimulateTo(Snapshot from, long toTime, CircularBuffer<ClientInput> inputHistory, CircularBuffer<Snapshot> snapshotHistory, Snapshot current)
 	{		
+		
 		//Snap world to initial state
 		try {
 			SynchronizeEntities(from);
@@ -181,11 +182,15 @@ public class EntityManager {
 		long time = from.getTimestamp(); //State at the time of the from snapshot
 		int inpInc = 0;					
 		int snpInc = 0;
-		float step = SharedVars.STEP * 1000;
+		long step = (long)(SharedVars.STEP * 1000);
+		
 		while(time < toTime){//Simulate to time of the to snapshot
 			if(time + step > toTime){
 				step = toTime - time;
 			}
+			
+			time += step;
+			
 			if(!snapshotHistory.isEmpty()){
 				while(snapshotHistory.peek(inpInc).getTimestamp() < time){
 					SynchronizeEntities(snapshotHistory.peek(snpInc));
@@ -202,7 +207,6 @@ public class EntityManager {
 			}
 			
 			Eug.GetWorld().step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-			time += step;
 		}
 		
 		Snapshot simulatedState = GenerateSnapshot(current.getInstanceId()); //Save simulated state to return later

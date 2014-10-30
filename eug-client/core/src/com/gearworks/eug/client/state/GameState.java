@@ -281,10 +281,8 @@ public class GameState implements State {
 		}else if(localSnapshot.getTimestamp() > serverSnapshot.getTimestamp()){
 			serverSnapshot = EntityManager.SimulateTo(serverSnapshot, localSnapshot.getTimestamp(), inputHistory, snapshotHistory, getLatestSnapshot());
 		}
-		if(Snapshot.Compare(serverSnapshot, localSnapshot)){
-			//System.out.println("CLIENT/SERVER ARE REASONABLY IN SYNC");
-			forceResetCount = 0;
-		}else{		
+		
+		if(!Snapshot.Compare(serverSnapshot, localSnapshot)){	
 			simulatedState = EntityManager.SimulateTo(serverSnapshot, getLatestSnapshot().getTimestamp(), inputHistory, snapshotHistory, getLatestSnapshot());
 			
 			if(simulatedState != null){
@@ -293,7 +291,6 @@ public class GameState implements State {
 					try {
 						EntityManager.SynchronizeEntities(simulatedState);
 						EntityManager.SnapToState(simulatedState.getEntityStates());
-						forceResetCount++;
 					} catch (EntityUpdateException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -301,83 +298,6 @@ public class GameState implements State {
 				}
 			}
 		}
-						
-		/*
-		for(int i = 0; i < serverSnapshot.getEntityStates().length; i++){
-			try {
-				EntityState serverEntState = serverSnapshot.getEntityStates()[i];
-				Entity ent = Eug.FindEntityById(serverEntState.getId());
-				boolean newEntity = false;
-				if(ent == null){
-					ent = EntityManager.BuildFromState(serverEntState);
-					newEntity = true;
-					System.out.println("NEW ENTITY");
-				}
-					
-				//Compare the server's entity state with the local entity state if it is not new
-				if(!newEntity){
-					System.out.println("Getting entity state: " + serverEntState.getId());
-					EntityState oldState = snapshotHistory.peek().getEntityState(serverEntState.getId()); //Get the state of the entity at the time the server took a snapshot.
-					if(!snapshotHistory.isEmpty() && oldState != null && EntityState.Compare(serverEntState, oldState)) continue; //Don't correct if no correction is required
-				}
-				
-				//Perform correction if a new entity was created, or if there has been input 
-				if(serverEntState.getPlayerId() == EugClient.GetPlayer().getId() && !snapshotHistory.isEmpty() && !inputHistory.isEmpty() || newEntity){
-					//Set the state to the server's state when the input occured.
-					EntityManager.SnapToState(snapshotHistory.pop().getEntityStates());
-					
-					if(newEntity){
-						EntityManager.BuildFromState(serverEntState);
-					}
-					
-					long simTime = serverSnapshot.getTimestamp();
-					long currentTime = Utils.generateTimeStamp();
-					EntityState correctedState = null; //Where we will store the corrected state of the client disk
-					
-					//Simulate to now using the corrected server state and the client inputs
-					System.out.println("Simulating..");
-					while(simTime < currentTime){
-						System.out.println("\t" + simTime + " < " + currentTime);
-						if(!inputHistory.isEmpty() && inputHistory.peek().getTimestamp() <= simTime){ //Apply relevant inputs
-							ClientInput input = inputHistory.pop();
-							input.resolve();
-						}
-						//Simulate
-						EugClient.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-						simTime += SharedVars.STEP * 1000;
-					}
-					
-					//Get the current (corrected) state of the player disk.
-					correctedState = EugClient.GetEntities().get(serverEntState.getId()).getState();
-					
-					
-					//Revert back to current state
-					EntityManager.SnapToState(generateSnapshot().getEntityStates());
-				}else{
-					EntityManager.SnapToState(serverEntState);	
-					System.out.println("SNAP");
-					//EntityManager.UpdateToState(serverEntState, false, 0);					
-				}
-			} catch (EntityUpdateException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (EntityBuildException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} 
-		}
-		
-		//Save the server's state for correction later.
-		serverSnapshot.setServerTick(getTick());
-		/*
-		if(snapshot.getTick() < getTick()){ //Server is behind
-			pruneOldHistory(getTick());
-			if(!snapshot.isEmpty())
-				snapshot = snapshotHistory.pop();
-		}
-		
-		
-		*/
 	}
 
 	//Remove all input/snapshots older than t

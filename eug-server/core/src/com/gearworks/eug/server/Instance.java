@@ -35,7 +35,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot, new snapshot is sent every tick
+	public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
