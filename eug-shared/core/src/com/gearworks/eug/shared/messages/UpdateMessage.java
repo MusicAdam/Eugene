@@ -1,20 +1,20 @@
 package com.gearworks.eug.shared.messages;
 
-import com.gearworks.eug.shared.state.ServerState;
+import com.gearworks.eug.shared.state.Snapshot;
 
 /*
- * Sent by the server to update client positions
+ * Sent by the server to update client with the latest snapshot
  */
 public class UpdateMessage extends Message {
-	ServerState state;
+	Snapshot state;
 	
 	public UpdateMessage(){
 		state = null;
 	}
 	
-	public UpdateMessage(ServerState s){
+	public UpdateMessage(Snapshot s){
 		state = s;
 	}
 	
-	public ServerState getState(){ return state; }
+	public Snapshot getSnapshot(){ return state; }
 }

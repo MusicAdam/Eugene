@@ -26,7 +26,6 @@ import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.UpdateMessage;
 import com.gearworks.eug.shared.state.EntityState;
-import com.gearworks.eug.shared.state.ServerState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.state.State;
 import com.gearworks.eug.shared.utils.CircularBuffer;
@@ -217,11 +216,10 @@ public class GameState implements State {
 			return;
 		}
 		
-		Snapshot snapshot = msg.getState().getSnapshot();		
-		tick = snapshot.getServerTick();
+		Snapshot snapshot = msg.getSnapshot();		
 		latestServerSnapshot = snapshot;
 		
-		EugClient.UpdatePlayers(msg.getState().getPlayerIds(), msg.getState().getDisconnectedPlayers());
+		EugClient.SynchronizePlayers(snapshot);
 		
 		for(EntityState state : snapshot.getEntityStates()){
 			try {
@@ -245,15 +243,13 @@ public class GameState implements State {
 	
 	protected void serverUpdate(UpdateMessage msg) {
 		if(!EugClient.GetPlayer().isValid()) return;
-		if(msg.getState().getSnapshot().getServerTick() > getTick()) return;
 		
-		ServerState state = msg.getState();
-		Snapshot serverSnapshot = state.getSnapshot();
+		Snapshot serverSnapshot = msg.getSnapshot();
 		latestServerSnapshot = serverSnapshot;
 		
 		latency = msg.getTravelTime();
 
-		EugClient.UpdatePlayers(state.getPlayerIds(), state.getDisconnectedPlayers());
+		EugClient.SynchronizePlayers(serverSnapshot);
 
 		//Get rid of history before the related state
 		//pruneOldHistory(serverSnapshot.getTimestamp());

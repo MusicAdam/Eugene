@@ -1,20 +1,21 @@
 package com.gearworks.eug.shared.messages;
 
-import com.gearworks.eug.shared.state.ServerState;
+import com.gearworks.eug.shared.state.Snapshot;
+
 
 public class InitializeSceneMessage extends Message {
 
 	int instanceId;
-	ServerState state;
+	Snapshot snap;
 	
 	public InitializeSceneMessage(){
-		state = null;
+		snap = null;
 	}
 	
-	public InitializeSceneMessage(int instanceId, ServerState s){
-		state = s;
+	public InitializeSceneMessage(int instanceId, Snapshot s){
+		snap = s;
 	}
 	
-	public ServerState getState(){ return state; }
+	public Snapshot getSnapshot(){ return snap; }
 	public int getInstanceId(){ return instanceId; }
 }

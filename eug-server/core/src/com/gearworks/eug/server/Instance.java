@@ -28,7 +28,6 @@ import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.UpdateMessage;
 import com.gearworks.eug.shared.state.EntityState;
-import com.gearworks.eug.shared.state.ServerState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.Utils;
 
@@ -46,7 +45,7 @@ public class Instance {
 	private Box2DDebugRenderer b2ddbgRenderer; 
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
 	private Array<Integer> disconnectedPlayerIds;
-	private ServerState previousState;
+	private Snapshot previousState;
 
 	public Instance(int id)
 	{
@@ -121,8 +120,7 @@ public class Instance {
 		tick++;
 		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
-		ServerState serverState = new ServerState(id, getPlayerIds(), getDisconnectedPlayerIds(), new Snapshot(id, getPlayerIds(), getEntityStates()));
-		serverState.getSnapshot().setServerTick(tick);
+		Snapshot serverState = new Snapshot(id, getPlayerIds(), getEntityStates());
 		if(previousState == null) previousState = serverState;
 		
 		//Update entities
@@ -162,7 +160,6 @@ public class Instance {
 					//Send snapshot to each player
 					if(pl.isValid()){
 						if((Utils.generateTimeStamp() - previousState.getTimestamp()) >= SNAPSHOT_DELAY){ //(90 + Math.random() * 110) <- random latency in average latency range
-							serverState.setInput(pl.getInputSnapshot());
 							UpdateMessage msg = new UpdateMessage(serverState);
 							msg.sendUDP(pl.getConnection());
 							pl.setInputSnapshot(null);
@@ -185,7 +182,6 @@ public class Instance {
 		//Remove disconnected players
 		ServerPlayer toRemove = null;
 		while((toRemove = removePlayerQueue.poll()) != null){
-			disconnectedPlayerIds.add(toRemove.getId()); 
 			removePlayer(toRemove);
 		}
 		
@@ -216,14 +212,6 @@ public class Instance {
 			playerIds[i + 1] = players.get(i).getId();
 		}
 		return playerIds;
-	}
-	
-	private int[] getDisconnectedPlayerIds(){
-		int[] dPlayers = new int[disconnectedPlayerIds.size];
-		for(int i = 0; i < disconnectedPlayerIds.size; i++){
-			dPlayers[i] = disconnectedPlayerIds.get(i);
-		}
-		return dPlayers;
 	}
 	
 	//Attempts to add player to the instance, returns true on success false if instance if full

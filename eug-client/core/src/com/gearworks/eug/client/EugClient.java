@@ -1,7 +1,10 @@
 package com.gearworks.eug.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -182,23 +185,40 @@ public class EugClient extends Eug {
 		Debug.println("[EugClient:SetInstance] Instance set to " + instanceId);
 	}
 	
-	public static void UpdatePlayers(int[] playerIds, int[] disconnectedPlayers){
+	public static void SynchronizePlayers(Snapshot snapshot){
 		if(!(Eug.GetStateManager().state() instanceof GameState)) return;
-		for(int i = 0; i < disconnectedPlayers.length; i++){
-			Player pl = Eug.FindPlayerById(disconnectedPlayers[i]);
+		
+
+		HashSet<Integer> serverPlayerSet = new HashSet<Integer>();
+		HashSet<Integer> localPlayerSet = new HashSet<Integer>();
+		
+		//Construct sets
+		for(int plId : snapshot.getConnectedPlayers())
+			serverPlayerSet.add(plId);
+		for(Player pl : GetPlayers())
+			localPlayerSet.add(pl.getId());
+		
+		//Get the serverPLayers - localPlayers to find which players have connected
+		HashSet<Integer> newPlayerIds = new HashSet<Integer>(serverPlayerSet);
+		newPlayerIds.removeAll(localPlayerSet);
+		
+		//Get localPlayers - serverPlayer to determine which players have disconnected
+		HashSet<Integer> deletedPlayerIds = new HashSet<Integer>(localPlayerSet);
+		deletedPlayerIds.removeAll(serverPlayerSet);
+		
+		for(Integer id : newPlayerIds){
+			ClientPlayer pl = new ClientPlayer(id);
+			EugClient.GetOtherPlayers().add(pl);
+			Debug.println("[EugClient:UpdatePlayers] Player " + id + " connected");
+		}
+		
+		for(Integer id : deletedPlayerIds){
+			Player pl = Eug.FindPlayerById(id);
+
 			if(pl  != null){
 				pl.dispose();
 				EugClient.GetOtherPlayers().removeValue((ClientPlayer)pl, true);
-				Debug.println("[EugClient:UpdatePlayers] Player " + disconnectedPlayers[i] + " diconnected");
-			}
-		}
-		//Update players
-		for(int playerId : playerIds){
-			if(playerId == EugClient.GetPlayer().getId()) continue;
-			if(Eug.FindPlayerById(playerId) == null){
-				ClientPlayer pl = new ClientPlayer(playerId);
-				EugClient.GetOtherPlayers().add(pl);
-				Debug.println("[EugClient:UpdatePlayers] Player " + playerId + " connected");
+				Debug.println("[EugClient:UpdatePlayers] Player " + id + " diconnected");
 			}
 		}
 	}

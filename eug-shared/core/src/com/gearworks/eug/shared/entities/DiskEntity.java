@@ -130,8 +130,8 @@ public class DiskEntity extends Entity {
 		FixtureDef fix = new FixtureDef();
 		fix.shape = unitShape;
 		fix.density = 1.0f;
-		fix.friction = 0.1f;
-		fix.restitution = .6f;
+		fix.friction = 0.5f;
+		fix.restitution = .9f;
 		
 		Fixture fixture = body().createFixture(fix);
 		fixture.setUserData(this);

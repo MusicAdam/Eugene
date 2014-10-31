@@ -16,12 +16,10 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Snapshot {
 	private int instanceId; //Server instance to which this snapshot is referring
 	private long timestamp;
-	private int clientTick; //Keeps track of the client tick to which this snapshot refers
-	private int serverTick; //  "             "  server  "              "   
-	private EntityState[] entityStates; //The states for all the entitites in this instance
+	private EntityState[] entityStates; //The states for all the entities in the server
 	private int[] playerIds; //Players who are connected
 	
-	public static Snapshot GenerateDefaultSnapshot(Entity ent){
+	public static Snapshot GenerateTestSnapshot(Entity ent){
 		Snapshot s = new Snapshot();
 		s.instanceId = 0;
 		s.timestamp = Utils.generateTimeStamp();
@@ -32,7 +30,6 @@ public class Snapshot {
 	
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
-		clientTick = -1;
 		instanceId = -1;
 		entityStates = null;
 	}
@@ -41,13 +38,12 @@ public class Snapshot {
 		timestamp = Utils.generateTimeStamp();
 		this.instanceId = instanceId;
 		this.entityStates = entityStates;
+		this.playerIds = playerIds;
 	}
 	
 	public Snapshot(Snapshot cpy){
 		this.timestamp = cpy.timestamp;
 		this.instanceId = cpy.instanceId;
-		this.clientTick = cpy.clientTick;
-		this.serverTick = cpy.serverTick;
 		
 		if(cpy.entityStates != null){
 			this.entityStates = new EntityState[cpy.entityStates.length];
@@ -58,10 +54,6 @@ public class Snapshot {
 	}
 	
 	public int getInstanceId() { return instanceId;	}
-	public int getClientTick() { return clientTick; }
-	public void setClientTick(int tick){ this.clientTick = tick; }
-	public int getServerTick() { return serverTick; }
-	public void setServerTick(int tick){ this.serverTick = tick; }
 	public long getTimestamp(){ return timestamp; }
 	public EntityState[] getEntityStates() { return entityStates; }
 
@@ -102,5 +94,9 @@ public class Snapshot {
 
 	public void setTimestamp(long time) {
 		timestamp = time;
+	}
+
+	public int[] getConnectedPlayers() {
+		return playerIds;
 	}
 }

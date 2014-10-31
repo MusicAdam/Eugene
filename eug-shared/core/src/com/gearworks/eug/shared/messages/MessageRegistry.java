@@ -18,7 +18,6 @@ import com.gearworks.eug.shared.input.ImpulseInput;
 import com.gearworks.eug.shared.input.TurnInput;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
-import com.gearworks.eug.shared.state.ServerState;
 import com.gearworks.eug.shared.state.Snapshot;
 
 public class MessageRegistry {	
@@ -39,7 +38,6 @@ public class MessageRegistry {
 		kryo.register(BodyState.class);
 		kryo.register(EntityState.class);
 		kryo.register(EntityState[].class);
-		kryo.register(ServerState.class);
 		kryo.register(Snapshot.class);
 		kryo.register(NetworkedFixture.class);
 		kryo.register(NetworkedFixture[].class);
