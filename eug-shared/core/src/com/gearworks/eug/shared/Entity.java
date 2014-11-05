@@ -56,10 +56,10 @@ public class Entity {
 	private EntityState spawnState; //Used to maintain spawn state for delayed spawn when created on update thread
 	
 	public Entity(int id, Player player){
-		this.player = player;
 		this.id = id;
 
 		type = Eug.GetEntityType(this);
+		setPlayer(player);
 	}
 	
 	public Player getPlayer(){
@@ -67,7 +67,15 @@ public class Entity {
 	}
 	
 	public void setPlayer(Player player){
+		if(this.player == player) return;
+		
+		if(this.player != null)
+			this.player.removeEntity(this);
+		
 		this.player = player;
+		
+		if(this.player != null)
+			this.player.addEntity(this);
 	}
 	
 	public int getInstanceId(){
@@ -126,6 +134,7 @@ public class Entity {
 	
 	public void dispose()
 	{
+		setPlayer(null);
 		if(body() == null) return;
 		
 		body().getWorld().destroyBody(body());
@@ -145,7 +154,7 @@ public class Entity {
 	public void postsolveContactWith(Fixture myFix, Fixture otherFix, Contact contact){}
 	
 	//Spawn is responsible for creating the physics body and sprite associated with this entity
-	public void spawn(){
+	public void spawn(World world){
 		if(spawnState != null){
 			try {
 				snapToState(spawnState);
@@ -388,4 +397,6 @@ public class Entity {
 		this.spawnState = spawnState;
 	}
 	public EntityState getSpawnState(){ return spawnState; }
+	
+	public boolean isSpawned(){ return body != null; }
 }

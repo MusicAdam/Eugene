@@ -19,7 +19,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
-import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.esotericsoftware.kryonet.Client;
@@ -33,6 +32,7 @@ import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
@@ -67,17 +67,15 @@ public class EugClient extends Eug {
 	private ClientPlayer player;
 	private UserInterface ui;
 	protected StateManager sm;
-	protected Map<Integer, Entity> entities;
-	protected World world;
 	protected Queue<QueuedMessageWrapper> messageQueue;
 	protected Queue<Entity> spawnQueue;
 	protected Queue<Entity> destroyQueue;
 	protected MessageRegistry messageRegistry;
 	protected EntityState entityState;
-	protected Array<ClientPlayer> otherPlayers; //These are other players connected to the server
 	protected Connection connection; //The player's connection to the server
 	protected Snapshot previousSnapshot;
 	protected Snapshot targetSnapshot;
+	protected World world;
 	
 	protected Thread updateThread;
 	protected boolean doUpdate = true;;
@@ -106,7 +104,6 @@ public class EugClient extends Eug {
 		client.addListener(new ClientListener());
 		MessageRegistry.Initialize(client.getKryo()); //Register messages
 		client.start();
-		otherPlayers = new Array<ClientPlayer>();
 		dbg_entSearchCount = 0;
 		
 		/*
@@ -126,15 +123,13 @@ public class EugClient extends Eug {
 		/*
 		 * Initialize states		
 		 */
+		world = new World(-1);
 		sm = new StateManager();
 		sm.setState(new ConnectState()); //Set initial state
-		
-		entities = new HashMap<Integer, Entity>();
 		
 		/*
 		 * Initialize physics
 		 */		
-		world = new World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
 		//world.setContactListener(new ContactHandler());
 		b2ddbgRenderer = new Box2DDebugRenderer();
 		
@@ -180,53 +175,10 @@ public class EugClient extends Eug {
 	
 	public static void SetInstance(int instanceId) {
 		EugClient.GetPlayer().setInstanceId(instanceId);
+		Eug.GetWorld().setInstanceId(instanceId);
 		AssignInstanceMessage msg= new AssignInstanceMessage(instanceId, GetPlayer().getId());
 		GetPlayer().getConnection().sendUDP(msg);
 		Debug.println("[EugClient:SetInstance] Instance set to " + instanceId);
-	}
-	
-	public static void SynchronizePlayers(Snapshot snapshot){
-		if(!(Eug.GetStateManager().state() instanceof GameState)) return;
-		
-
-		HashSet<Integer> serverPlayerSet = new HashSet<Integer>();
-		HashSet<Integer> localPlayerSet = new HashSet<Integer>();
-		
-		//Construct sets
-		for(int plId : snapshot.getConnectedPlayers())
-			serverPlayerSet.add(plId);
-		for(Player pl : GetPlayers())
-			localPlayerSet.add(pl.getId());
-		
-		//Get the serverPLayers - localPlayers to find which players have connected
-		HashSet<Integer> newPlayerIds = new HashSet<Integer>(serverPlayerSet);
-		newPlayerIds.removeAll(localPlayerSet);
-		
-		//Get localPlayers - serverPlayer to determine which players have disconnected
-		HashSet<Integer> deletedPlayerIds = new HashSet<Integer>(localPlayerSet);
-		deletedPlayerIds.removeAll(serverPlayerSet);
-		
-		for(Integer id : newPlayerIds){
-			ClientPlayer pl = new ClientPlayer(id);
-			EugClient.GetOtherPlayers().add(pl);
-			Debug.println("[EugClient:UpdatePlayers] Player " + id + " connected");
-		}
-		
-		for(Integer id : deletedPlayerIds){
-			Player pl = Eug.FindPlayerById(id);
-
-			if(pl  != null){
-				pl.dispose();
-				EugClient.GetOtherPlayers().removeValue((ClientPlayer)pl, true);
-				Debug.println("[EugClient:UpdatePlayers] Player " + id + " diconnected");
-			}
-		}
-	}
-
-	private synchronized static Array<ClientPlayer> GetOtherPlayers() {
-		synchronized(Get().playerLock){
-			return ((EugClient)Get()).otherPlayers;
-		}
 	}
 
 	@Override
@@ -274,7 +226,7 @@ public class EugClient extends Eug {
 		
 		if(SharedVars.DEBUG_PHYSICS){
 			Matrix4 dbgMatrix = camera.combined.cpy().scl(SharedVars.BOX_TO_WORLD);
-			b2ddbgRenderer.render(world, dbgMatrix);
+			b2ddbgRenderer.render(world.getPhysicsWorld(), dbgMatrix);
 		}
 		
 		//fps.log();
@@ -344,9 +296,10 @@ public class EugClient extends Eug {
 		return ((EugClient)Get()).player;
 	}
 	
-	public static Camera GetCamera()
+	@Override
+	protected Camera getCamera()
 	{
-		return ((EugClient)Get()).camera;
+		return camera;
 	}
 	
 	public static void QueueMessage(QueuedMessageWrapper m){
@@ -366,16 +319,8 @@ public class EugClient extends Eug {
 	@Override
 	protected Entity spawn(Entity ent)
 	{
-		if(Thread.currentThread().getName().equals(UPDATE_THREAD)){
-			spawnQueue.add(ent);
-			return ent;
-		}else{
-			synchronized(entityLock){
-				entities.put(ent.getId(), ent);
-				ent.spawn();
-				return ent;
-			}
-		}
+		world.spawn(ent);
+		return ent;
 	}
 	
 	@Override
@@ -385,8 +330,7 @@ public class EugClient extends Eug {
 			destroyQueue.add(ent);
 		}else{
 			synchronized(entityLock){
-				ent.dispose();
-				entities.remove(ent.getId());
+				world.destroy(ent);
 			}
 		}
 	}
@@ -406,32 +350,27 @@ public class EugClient extends Eug {
 	@Override
 	public Map<Integer, Entity> getEntities() {
 		synchronized(entityLock){
-			return entities;
+			return world.getEntityMap();
 		}
 	}
 
 	public static void SetPlayer(ClientPlayer clientPlayer) {
 		((EugClient)Get()).player = clientPlayer;
+		Eug.GetWorld().addPlayer(clientPlayer);
 	}
 	
 	@Override
 	public Entity findEntityById(int id){	
 		synchronized(entityLock){
 			dbg_entSearchCount++;
-			return entities.get(id);
+			return world.getEntity(id);
 		}
 	}
 	
 	@Override
 	public Player findPlayerById(int id){
 		synchronized(playerLock){
-			if(id == player.getId()) return player;
-			
-			for(int i = 0; i < otherPlayers.size; i++)
-				if(otherPlayers.get(i).getId() == id) 
-					return otherPlayers.get(i);
-			
-			return null;
+			return world.getPlayer(id);
 		}
 	}
 	
@@ -453,7 +392,7 @@ public class EugClient extends Eug {
 	
 	@Override
 	protected boolean entityExists(int id){
-		return entities.containsKey(id);
+		return world.getEntityMap().containsKey(id);
 	}
 
 	public static int GetInstanceId() {
@@ -462,11 +401,6 @@ public class EugClient extends Eug {
 	
 	@Override 
 	protected List<Player> getPlayers(){
-		ArrayList<Player> players = new ArrayList<Player>();
-		players.add(player);
-		for(Player pl : otherPlayers){
-			players.add(pl);
-		}
-		return players;
+		return world.getPlayers();
 	}
 }

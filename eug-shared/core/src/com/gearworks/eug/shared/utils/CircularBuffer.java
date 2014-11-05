@@ -69,10 +69,16 @@ public class CircularBuffer<T> {
 		}
 	}
 	
-	public int size(){
+	public int count(){
 		synchronized(lock){
+			if(isFull())
+				return data.length;
 			return tail - head;
 		}
+	}
+	
+	public int size(){
+		return data.length;
 	}
 	
 	@Override

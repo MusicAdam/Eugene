@@ -18,6 +18,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.World;
 
 public class DiskEntity extends Entity {
 	private Player owner;
@@ -110,7 +111,7 @@ public class DiskEntity extends Entity {
 	}
 	
 	@Override
-	public void spawn(){
+	public void spawn(World world){
 		setSprite("disk.png");
 		
 		//Create body def
@@ -119,7 +120,7 @@ public class DiskEntity extends Entity {
 		bodyDef.position.set(100 * SharedVars.WORLD_TO_BOX, 100 * SharedVars.WORLD_TO_BOX);
 		
 		//Create body
-		body(Eug.GetWorld().createBody(bodyDef));
+		body(world.getPhysicsWorld().createBody(bodyDef));
 		body().setAngularDamping(angularDamping);
 		body().setUserData(this);
 		
@@ -137,7 +138,7 @@ public class DiskEntity extends Entity {
 		fixture.setUserData(this);
 		
 		unitShape.dispose();
-		super.spawn();
+		super.spawn(world);
 	}
 	
 	//This function only checks the angle of the point relative to the position of the body. It does not check that the point is contained within a bodies' fixture

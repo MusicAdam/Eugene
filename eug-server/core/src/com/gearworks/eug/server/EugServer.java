@@ -1,6 +1,9 @@
 package com.gearworks.eug.server;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -16,7 +19,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
-import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.esotericsoftware.kryonet.Connection;
@@ -26,6 +28,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.EntityDestroyedMessage;
 import com.gearworks.eug.shared.messages.Message;
@@ -97,7 +100,7 @@ public class EugServer extends Eug {
 		/*
 		 * Initialize physics
 		 */		
-		world = new World(new Vector2(0, 0), true);
+		//world = new World();
 		//world.setContactListener(new ContactHandler());
 		b2ddbgRenderer = new Box2DDebugRenderer();
 	}
@@ -225,7 +228,6 @@ public class EugServer extends Eug {
 		
 		Instance instance = instances.get(requestInstanceId); //Needed for ent.spawn();
 		
-		ent.spawn();
 		instance.addEntity(ent);
 		
 		requestInstanceId = -1;
@@ -261,7 +263,12 @@ public class EugServer extends Eug {
 
 	@Override
 	public Map<Integer, Entity> getEntities() {
-		throw new NotImplementedException();
+		HashMap<Integer, Entity> entityMap = new HashMap<Integer, Entity>();
+		for(int i = 0; i < instances.size; i++){
+			Instance instance = instances.get(i);
+			entityMap.putAll(instance.getWorld().getEntityMap());
+		}
+		return entityMap;
 	}
 	
 	public static void OpenInstanceRequest(int id){
@@ -333,5 +340,15 @@ public class EugServer extends Eug {
 		}
 		
 		return null;
+	}
+	
+	@Override
+	protected List<Player> getPlayers(){
+		ArrayList<Player> players = new ArrayList<Player>();
+		for(int i = 0; i < instances.size; i++){
+			Instance instance = instances.get(i);
+			players.addAll(instance.getWorld().getPlayers());
+		}
+		return players;
 	}
 }

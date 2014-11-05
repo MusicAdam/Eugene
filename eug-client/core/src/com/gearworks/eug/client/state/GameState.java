@@ -16,6 +16,8 @@ import com.gearworks.eug.shared.EntityEventListener;
 import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.SimulationRule;
+import com.gearworks.eug.shared.Simulator;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
@@ -46,12 +48,12 @@ public class GameState implements State {
 	public static float ROTATION_SMOOTHING_RATIO = .01f;
 	public static float ROTATION_SMOOTHING_MINIMUM = .1f; //Minimum delta which will be smoothed
 	
+	private Simulator simulator;
 	private int assignInstanceMessageIndex = -1;
 	private int initializeSceneMessageIndex = -1;
 	private int serverUpdateMessageIndex = -1;
 	private EntityEventListener entityEventListener;
 	private long latency;
-	private CircularBuffer<ClientInput> inputHistory;
 	private CircularBuffer<Snapshot> snapshotHistory;
 	private int tick;
 	private Snapshot latestSnapshot;
@@ -74,7 +76,6 @@ public class GameState implements State {
 	public void onEnter() {
 		Debug.println("[GameState: onEnter()]");
 		startTime = Utils.generateTimeStamp();
-		inputHistory = new CircularBuffer<ClientInput>(SharedVars.HISTORY_SIZE);
 		snapshotHistory = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
 		
 		//Register assigninstancemessage to wait for our instance to be assigned.
@@ -87,7 +88,7 @@ public class GameState implements State {
 		});		
 		
 		//Initialize entity listeners
-		entityEventListener = EntityManager.AddListener(new EntityEventListener(){
+		/*entityEventListener = Eug.GetWorld().addEntityListener(new EntityEventListener(){
 			@Override
 			public void onCreate(Entity ent){
 				//Debug.println("Created " + ent.getId());
@@ -103,7 +104,7 @@ public class GameState implements State {
 			public void onDestroy(Entity ent){
 				System.out.println("Destroyed entity " + ent.getId() + " at " + Utils.generateTimeStamp());
 			}
-		});
+		});*/
 	}
 
 	@Override
@@ -114,7 +115,7 @@ public class GameState implements State {
 	@Override
 	public void onExit() {
 		//Cleanup all our callbacks/listeners
-		EntityManager.RemoveListener(entityEventListener);
+		Eug.GetWorld().removeEntityListener(entityEventListener);
 		
 		if(assignInstanceMessageIndex != -1)
 			EugClient.GetMessageRegistry().remove(assignInstanceMessageIndex);
@@ -125,15 +126,8 @@ public class GameState implements State {
 	}
 
 	@Override
-	public void render() {
-		if(EugClient.GetPlayer().isValid()){ //Render entities
-			Iterator entIt = EugClient.GetEntities().entrySet().iterator();
-			while(entIt.hasNext())
-			{ 
-				Map.Entry<Integer, Entity> pairs = (Map.Entry<Integer, Entity>)entIt.next();
-				pairs.getValue().render(EugClient.GetSpriteBatch(), EugClient.GetShapeRenderer());
-			}
-		}
+	public void render() {		
+		EugClient.GetWorld().render();
 		
 		if(latestServerSnapshot != null){
 			Color old = EugClient.GetSpriteBatch().getColor();
@@ -154,10 +148,30 @@ public class GameState implements State {
 	@Override
 	public void update() {
 		frameStart = Utils.generateTimeStamp();
-		latestSnapshot = EntityManager.GenerateSnapshot(EugClient.GetInstanceId());
+		
+		Eug.GetWorld().update(SharedVars.STEP);
+		
+		latestSnapshot = Eug.GetWorld().getLatestSnapshot();
 		snapshotHistory.push(latestSnapshot);
 		
 		if(EugClient.GetPlayer().isValid()){ //Update entities
+			//Add inputs if there are any
+			for(ClientInput input : EugClient.GetPlayer().getInputs()){
+				latestSnapshot.pushInput(input);
+			}
+			EugClient.GetPlayer().clearInputs();
+			
+			//Initialize simulator if it hasn't been already
+			if(simulator == null){
+				simulator = new Simulator();
+				simulator.addRule(new SimulationRule(){
+					@Override
+					public void apply(Snapshot snapshot, long step){
+						
+					}
+				});
+			}		
+			
 			//Remove init scene message and registry update message if it still needs to be done.
 			if(initializeSceneMessageIndex != -1){
 				EugClient.GetMessageRegistry().remove(initializeSceneMessageIndex);
@@ -171,13 +185,6 @@ public class GameState implements State {
 								thisRef.serverUpdate((UpdateMessage)msg);
 							}
 						});
-			}
-			
-			Iterator entIt = EugClient.GetEntities().entrySet().iterator();
-			while(entIt.hasNext())
-			{ 
-				Map.Entry<Integer, Entity> pairs = (Map.Entry<Integer, Entity>)entIt.next();
-				pairs.getValue().update();
 			}
 		}else if(EugClient.GetPlayer().isInstanceValid() && !EugClient.GetPlayer().isInitialized()){
 			//Remove the assigninstancemessage callback if it still exists & create sceneinitialize listener
@@ -193,14 +200,6 @@ public class GameState implements State {
 					}
 				});
 			}
-		}
-		
-		Eug.GetWorld().step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-		
-		tick++;
-		//Handle wrapping
-		if(tick < 0){
-			tick = 0;
 		}
 		
 		frameTimeSum += (Utils.generateTimeStamp() - frameStart);
@@ -219,20 +218,7 @@ public class GameState implements State {
 		Snapshot snapshot = msg.getSnapshot();		
 		latestServerSnapshot = snapshot;
 		
-		EugClient.SynchronizePlayers(snapshot);
-		
-		for(EntityState state : snapshot.getEntityStates()){
-			try {
-				EntityManager.BuildFromState(state);
-				/*
-				 * TODO: Handle these exceptions in a friendlier way. (Disconnect player and return to main menu? Retry?)
-				 */
-			} catch (EntityBuildException e) {
-				e.printStackTrace();
-			} catch (EntityUpdateException e) {
-				e.printStackTrace();
-			}
-		}
+		Eug.GetWorld().synchronizeSnapshot(snapshot);
 		
 		EugClient.GetPlayer().setInitialized(true);
 		InitializeSceneMessage ack = new InitializeSceneMessage(EugClient.GetPlayer().getInstanceId(), null);
@@ -249,8 +235,12 @@ public class GameState implements State {
 		
 		latency = msg.getTravelTime();
 
-		EugClient.SynchronizePlayers(serverSnapshot);
-
+		Eug.GetWorld().synchronizeSnapshot(serverSnapshot);
+		
+		//EugClient.SynchronizePlayers(serverSnapshot);
+		//simulator.simulate(serverSnapshot, getLatestSnapshot().getTimestamp(), snapshotHistory);
+		
+		
 		//Get rid of history before the related state
 		//pruneOldHistory(serverSnapshot.getTimestamp());
 		
@@ -259,11 +249,7 @@ public class GameState implements State {
 			snapshotHistory.pop();
 		}
 		
-		while(inputHistory.peek() != null && inputHistory.peek().getTimestamp() < serverSnapshot.getTimestamp()){
-			inputHistory.pop();
-		}
-		
-		
+		/*
 		Snapshot simulatedState = null;
 		Snapshot localSnapshot = snapshotHistory.peek(); 
 		
@@ -293,14 +279,11 @@ public class GameState implements State {
 					}
 				}
 			}
-		}
+		}*/
 	}
 
 	//Remove all input/snapshots older than t
 	private void pruneOldHistory(long t){
-		while(inputHistory.peek() != null && inputHistory.peek().getTimestamp() < t){
-			inputHistory.pop();
-		}
 		while(snapshotHistory.peek() != null && snapshotHistory.peek().getTimestamp() < t){
 			snapshotHistory.pop();
 		}
@@ -311,13 +294,7 @@ public class GameState implements State {
 	@Override
 	public int getId() {
 		return 1;
-	}
-
-	public void storeMove(ClientInput input) {
-		inputHistory.push(input);
-	}
-
-	
+	}	
 	
 	public Snapshot getLatestSnapshot(){
 		return latestSnapshot;

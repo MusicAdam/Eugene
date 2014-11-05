@@ -1,13 +1,17 @@
 package com.gearworks.eug.shared.state;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Player;
+import com.gearworks.eug.shared.PlayerState;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.utils.CircularBuffer;
 import com.gearworks.eug.shared.utils.Utils;
 
 /*
@@ -17,14 +21,16 @@ public class Snapshot {
 	private int instanceId; //Server instance to which this snapshot is referring
 	private long timestamp;
 	private EntityState[] entityStates; //The states for all the entities in the server
-	private int[] playerIds; //Players who are connected
+	private PlayerState[] players; //Players who are connected
+	
+	private transient CircularBuffer<ClientInput> inputs; //Record of inputs since last snapshot
 	
 	public static Snapshot GenerateTestSnapshot(Entity ent){
 		Snapshot s = new Snapshot();
 		s.instanceId = 0;
 		s.timestamp = Utils.generateTimeStamp();
 		s.entityStates = new EntityState[]{EntityState.GenerateTestState(ent)};
-		s.playerIds = new int[]{ent.getPlayer().getId()};
+		s.players = new PlayerState[]{ent.getPlayer().getState()};
 		return s;
 	}
 	
@@ -34,11 +40,12 @@ public class Snapshot {
 		entityStates = null;
 	}
 
-	public Snapshot(int instanceId, int[] playerIds, EntityState[] entityStates) {
+	public Snapshot(int instanceId, PlayerState[] players, EntityState[] entityStates) {
 		timestamp = Utils.generateTimeStamp();
 		this.instanceId = instanceId;
 		this.entityStates = entityStates;
-		this.playerIds = playerIds;
+		this.players = players;
+		this.inputs = new CircularBuffer<ClientInput>(SharedVars.HISTORY_SIZE);
 	}
 	
 	public Snapshot(Snapshot cpy){
@@ -96,7 +103,15 @@ public class Snapshot {
 		timestamp = time;
 	}
 
-	public int[] getConnectedPlayers() {
-		return playerIds;
+	public PlayerState[] getPlayers() {
+		return players;
+	}
+	
+	public CircularBuffer<ClientInput> getClientInput(){
+		return inputs;
+	}
+	
+	public void pushInput(ClientInput input){
+		inputs.push(input);
 	}
 }

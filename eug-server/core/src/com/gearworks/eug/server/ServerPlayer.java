@@ -7,7 +7,6 @@ import com.gearworks.eug.shared.input.ClientInput;
 
 public class ServerPlayer extends Player {
 	
-	private ClientInput lastInput; //A reference to the player's last input for reference in the next snapshot
 	private DiskEntity disk;
 
 	public ServerPlayer(int id) {
@@ -22,7 +21,4 @@ public class ServerPlayer extends Player {
 	public DiskEntity getDisk(){
 		return disk;
 	}
-	
-	public void setInputSnapshot(ClientInput input){ lastInput = input; }
-	public ClientInput getInputSnapshot(){ return lastInput; }
 }

@@ -18,9 +18,7 @@ import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
 
-public class EntityManager {
-	private static Array<EntityEventListener> listeners;
-	
+public class EntityManager {	
 	public static void SnapToTestState(Entity ent){
 		try {
 			ent.snapToState(EntityState.GenerateTestState(ent));
@@ -31,37 +29,14 @@ public class EntityManager {
 	}
 	
 	/*
-	 * Factory listeners to hook into entity creation/updates
-	 */
-	public static EntityEventListener AddListener(EntityEventListener listener){
-		if(listeners == null)
-			listeners = new Array<EntityEventListener>();
-		listeners.add(listener);
-		System.out.println("REGISTERED ENT LISTENER");
-		return listener;
-	}
-	
-	public static void RemoveListener(EntityEventListener listener){
-		if(listeners == null) return;
-		listeners.removeValue(listener, true);
-	}
-	
-	public static void EntityDestroyed(Entity ent){
-		if(listeners == null) return;
-		for(EntityEventListener listener : listeners){
-			listener.onDestroy(ent);
-		}
-	}
-	
-	/*
 	 * Builds a new entity from a given EntityState
 	 */
-	public static Entity BuildFromState(EntityState state) throws EntityBuildException, EntityUpdateException{
-		//First check if the entity already exists
-		if(Eug.FindEntityById(state.getId()) != null) throw new EntityBuildException("Couldn't build entity " + state.getId() + ": Entity already exists");
+	public static Entity BuildFromState(World world, EntityState state) throws EntityBuildException, EntityUpdateException{
+		//First check if the entity already exists (TODO: should probably just snap that entity to this state instead of failing...
+		if(world.getEntity(state.getId()) != null) throw new EntityBuildException("Couldn't build entity " + state.getId() + ": Entity already exists");
 		
 		Entity ent;		
-		Player player = Eug.FindPlayerById(state.getPlayerId());
+		Player player = world.getPlayer(state.getPlayerId());
 		
 		if(player == null) throw new EntityBuildException("Could not build entity " + state.getId() + ": Player " + state.getPlayerId() + " doesn't exist.");
 		
@@ -80,14 +55,6 @@ public class EntityManager {
 				throw new EntityBuildException("Could not build entity " + state.getId() + ": Unknown entity type given.");
 		}
 
-		ent.setSpawnState(state);
-		Eug.Spawn(ent);
-		player.addEntity(ent);
-		
-		for(EntityEventListener listener : listeners){
-			listener.onCreate(ent);
-		}
-		
 		return ent;
 	}
 	
@@ -101,26 +68,16 @@ public class EntityManager {
 		return SnapToState(state, ent);
 	}
 		
-	public static Entity SnapToState(EntityState state, Entity ent) throws EntityUpdateException{
-		for(EntityEventListener listener : listeners){
-			listener.preUpdate(ent, state);
-		}
-		
-		ent.snapToState(state);
-		
-
-		for(EntityEventListener listener : listeners){
-			listener.postUpdate(ent);
-		}
-		
+	public static Entity SnapToState(EntityState state, Entity ent) throws EntityUpdateException{		
+		ent.snapToState(state);		
 		return ent;
 	}
 	
 	//Creates or destroys an entity based on its state
-	public static void UpdateToState(EntityState state, boolean snap, float a) throws EntityBuildException, EntityUpdateException{
-		Entity ent = Eug.FindEntityById(state.getId());
+	public static void UpdateToState(World world, EntityState state, boolean snap, float a) throws EntityBuildException, EntityUpdateException{
+		Entity ent = world.getEntity(state.getId());
 		if(ent == null){ 
-			ent = BuildFromState(state);
+			ent = BuildFromState(world, state);
 		}else if(ent != null){
 			if(snap){
 				SnapToState(state, ent);
@@ -130,14 +87,14 @@ public class EntityManager {
 		}
 	}
 	
-	public static void UpdateToState(EntityState[] states, boolean snap, float a) throws EntityBuildException, EntityUpdateException{ 
+	public static void UpdateToState(World world, EntityState[] states, boolean snap, float a) throws EntityBuildException, EntityUpdateException{ 
 		for(EntityState state : states){
-			UpdateToState(state, snap, a);
+			UpdateToState(world, state, snap, a);
 		}
 	}
 	
-	public static void UpdateToState(EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
-		UpdateToState(state, snap, 1);
+	public static void UpdateToState(World world, EntityState state, boolean snap) throws EntityBuildException, EntityUpdateException{
+		UpdateToState(world, state, snap, 1);
 	}
 
 	public static void InterpolateToState(EntityState state, Entity ent, float a) throws EntityUpdateException {
@@ -167,7 +124,7 @@ public class EntityManager {
 			SnapToState(entityStates[i]);
 		}
 	}
-	
+	/*
 	public static Snapshot SimulateTo(Snapshot from, long toTime, CircularBuffer<ClientInput> inputHistory, CircularBuffer<Snapshot> snapshotHistory, Snapshot current)
 	{		
 		
@@ -206,7 +163,7 @@ public class EntityManager {
 				}
 			}
 			
-			Eug.GetWorld().step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
+			//Eug.GetWorld().step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		}
 		
 		Snapshot simulatedState = GenerateSnapshot(current.getInstanceId()); //Save simulated state to return later
@@ -219,7 +176,9 @@ public class EntityManager {
 		simulatedState.setTimestamp(time);
 		return simulatedState; //Return simulated state
 	}
+	*/
 	
+	/*
 	public static Snapshot GenerateSnapshot(int instanceId) {
 		int[] playerIds = new int[Eug.GetPlayers().size()];
 		int i = 0;
@@ -230,6 +189,7 @@ public class EntityManager {
 		Snapshot s = new Snapshot(instanceId, playerIds, GetEntityStates());
 		return s;
 	}
+	*/
 	
 	public static EntityState[] GetEntityStates() {
 		EntityState[] states = new EntityState[Eug.GetEntities().entrySet().size()];
@@ -247,7 +207,7 @@ public class EntityManager {
 	}
 	
 	//Ensures entities that exists/dne in the given snap are in the same state in the world.
-	public static void SynchronizeEntities(Snapshot snap){
+	/*public static void SynchronizeEntities(Snapshot snap){
 		int worldEntityCount = Eug.GetEntities().size();
 		int snapEntityCount = snap.getEntityStates().length;
 		
@@ -302,5 +262,5 @@ public class EntityManager {
 				}
 			}
 		}
-	}
+	}*/
 }

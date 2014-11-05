@@ -15,9 +15,4 @@ public class ImpulseInput extends ClientInput {
 		super(id, event, dir, key);
 		inheritanceLevel = 1;
 	}
-
-	@Override
-	public void resolve(Player pl) {
-		pl.processInput(this);
-	}
 }

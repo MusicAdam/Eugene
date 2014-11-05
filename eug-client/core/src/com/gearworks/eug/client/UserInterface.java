@@ -52,7 +52,6 @@ public class UserInterface implements InputProcessor{
 				
 				GameState state = (GameState)Eug.GetStateManager().state();
 				ClientInput input = new ImpulseInput(EugClient.GetPlayer().getId(), Event.Key, dir, Input.Keys.SPACE);
-				state.storeMove(input);
 				input.resolve();
 				EugClient.GetPlayer().getConnection().sendUDP(input);
 			}
@@ -86,7 +85,6 @@ public class UserInterface implements InputProcessor{
 	
 				GameState state = (GameState)Eug.GetStateManager().state();
 				ClientInput input = new TurnInput(EugClient.GetPlayer().getId(), Event.LeftMouseButton, dir, -1);
-				state.storeMove(input);
 				input.resolve();
 				EugClient.GetPlayer().getConnection().sendUDP(input);
 			}

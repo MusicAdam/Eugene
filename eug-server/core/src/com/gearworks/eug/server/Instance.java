@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
-import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.Debug;
@@ -17,6 +16,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.input.ClientInput;
@@ -38,13 +38,10 @@ public class Instance {
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
-	private Array<ServerPlayer> 	players;
-	private Array<Entity>	entities;
 	private World			world;
 	private Queue<ServerPlayer> 	removePlayerQueue;
 	private Box2DDebugRenderer b2ddbgRenderer; 
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
-	private Array<Integer> disconnectedPlayerIds;
 	private Snapshot previousState;
 
 	public Instance(int id)
@@ -53,12 +50,12 @@ public class Instance {
 		this.id = id;
 		b2ddbgRenderer = new Box2DDebugRenderer();
 		removePlayerQueue = new ConcurrentLinkedQueue<ServerPlayer>();
-		players = new Array<ServerPlayer>();
-		entities = new Array<Entity>();
-		world = new World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
+		world = new World(id);
 		serverPlayer = new ServerPlayer(-1);
+		serverPlayer.setInitialized(true);
 		serverPlayer.setInstanceId(id);
-		disconnectedPlayerIds = new Array<Integer>();
+		world.addPlayer(serverPlayer);
+		previousState = world.generateSnapshot(id);
 		tick = 0;
 		
 		//Setup message handlers
@@ -75,7 +72,7 @@ public class Instance {
 				if(aMsg.getPlayerId() == -1) return;
 				
 				//Validate player
-				for(Player pl : thisInst.players){
+				for(Player pl : thisInst.world.getPlayers()){
 					if(!pl.isInstanceValid() && pl.getId() == aMsg.getPlayerId()){
 						pl.setInstanceId(thisInst.getId());
 					}
@@ -100,7 +97,7 @@ public class Instance {
 	}
 	
 	public void initialize(){//init level here
-		EugServer.Spawn(new LevelBoundsEntity(entities.size, serverPlayer));
+		EugServer.Spawn(new LevelBoundsEntity(world.countEntities(), serverPlayer));
 	}
 	
 	protected void clientInputReceived(Connection c, ClientInput msg) {		
@@ -112,26 +109,23 @@ public class Instance {
 		
 		if(pl == null) return;
 		
-		pl.setInputSnapshot(msg);
 		msg.resolve();
 	}
 
 	public void update(){
 		tick++;
-		world.step(SharedVars.STEP, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-		
-		Snapshot serverState = new Snapshot(id, getPlayerIds(), getEntityStates());
-		if(previousState == null) previousState = serverState;
+		world.update(SharedVars.STEP);
 		
 		//Update entities
-		for(Entity e : entities){
+		for(Entity e : world.getEntities()){
 			e.update();
 		}
 		
 		boolean snapshotSent = false;
 		
-		for(int i = 0; i < players.size; i++){
-			ServerPlayer pl = players.get(i);
+		for(Player basePlayer : world.getPlayers()){
+			if(basePlayer.getId() == -1) continue; //Skip server player
+			ServerPlayer pl = (ServerPlayer)basePlayer;
 			//Check for invalid players
 			if(!pl.isInstanceValid()){
 				//Resend message if enough time has elapsed
@@ -143,7 +137,7 @@ public class Instance {
 				//
 				//Send Instance validation
 				if(!pl.isInitialized() && Utils.generateTimeStamp() - pl.getValidationTimestamp() >= VALIDATION_DELAY){
-					InitializeSceneMessage msg = new InitializeSceneMessage(id, serverState);
+					InitializeSceneMessage msg = new InitializeSceneMessage(id, world.getLatestSnapshot());
 					msg.sendUDP(pl.getConnection());
 					pl.setValidationTimestamp(Utils.generateTimeStamp());
 					Debug.println("[Instance:update] [" + id + "] resending InitializeSceneMessage to player " + pl.getId() + ".");
@@ -153,16 +147,15 @@ public class Instance {
 					//Initialize player TODO: should be hookable somehow
 					if(pl.getDisk() == null){
 						//Create disk for player
-						Entity e = EugServer.Spawn(new DiskEntity(entities.size, pl));
+						Entity e = EugServer.Spawn(new DiskEntity(world.countEntities(), pl));
 						pl.setDisk((DiskEntity)e);
 					}
 					
 					//Send snapshot to each player
-					if(pl.isValid()){
+					if(pl.isValid()){						
 						if((Utils.generateTimeStamp() - previousState.getTimestamp()) >= SNAPSHOT_DELAY){ //(90 + Math.random() * 110) <- random latency in average latency range
-							UpdateMessage msg = new UpdateMessage(serverState);
+							UpdateMessage msg = new UpdateMessage(world.getLatestSnapshot());
 							msg.sendUDP(pl.getConnection());
-							pl.setInputSnapshot(null);
 							snapshotSent = true;
 						}
 					}
@@ -176,7 +169,7 @@ public class Instance {
 		}
 		
 		if(snapshotSent){
-			previousState = serverState;
+			previousState = world.getLatestSnapshot();
 		}
 		
 		//Remove disconnected players
@@ -193,23 +186,26 @@ public class Instance {
 		
 		if(SharedVars.DEBUG_PHYSICS){
 			Matrix4 dbgMatrix = EugServer.GetCamera().combined.cpy().scl(SharedVars.BOX_TO_WORLD);
-			b2ddbgRenderer.render(world, dbgMatrix);
+			b2ddbgRenderer.render(world.getPhysicsWorld(), dbgMatrix);
 		}
 	}
 	
 	private EntityState[] getEntityStates(){
-		EntityState[] states = new EntityState[entities.size];
-		for(int i = 0; i < entities.size; i++){
-			states[i] = entities.get(i).getState();
+		EntityState[] states = new EntityState[world.countEntities()];
+		int i = 0;
+		for(Entity ent : world.getEntities()){
+			states[i] = ent.getState();
+			i++;
 		}
 		return states;
 	}
 	
 	private int[] getPlayerIds(){
-		int[] playerIds = new int[players.size + 1];
-		playerIds[0] = serverPlayer.getId();
-		for(int i = 0; i < players.size; i++){
-			playerIds[i + 1] = players.get(i).getId();
+		int[] playerIds = new int[world.countPlayers()];
+		int i =0;
+		for(Player pl : world.getPlayers()){
+			playerIds[i] = pl.getId();
+			i++;
 		}
 		return playerIds;
 	}
@@ -219,7 +215,7 @@ public class Instance {
 	public boolean addPlayer(ServerPlayer player){
 		if(isFull()) return false;
 
-		players.add(player);
+		world.addPlayer(player);
 		sendAssignInstanceMessage(player);
 		
 		Debug.println("[Instance:addPlayer] [" + getId() + "] Added player " + player.getId());
@@ -228,7 +224,7 @@ public class Instance {
 	
 	//Attempts to remove a player from the instance, return true on success, false if player is not in instance
 	public boolean removePlayer(ServerPlayer player){
-		if(players.removeValue(player, true)){
+		if(world.removePlayer(player)){
 			player.dispose(); //Removes the player's entities
 			player.setInstanceId(-1);
 			EugServer.QueueIdlePlayer(player);
@@ -240,15 +236,12 @@ public class Instance {
 	}
 	
 	public Entity addEntity(Entity ent){
-		entities.add(ent);		
-		ent.getPlayer().addEntity(ent);
+		world.spawn(ent);		
 		return ent;
 	}
 	
 	public void removeEntity(Entity ent){
-		if(entities.removeValue(ent, true)){
-			ent.getPlayer().removeEntity(ent);
-		}
+		world.destroy(ent);
 	}
 	
 	public void sendAssignInstanceMessage(ServerPlayer pl){
@@ -257,26 +250,20 @@ public class Instance {
 		msg.sendUDP(pl.getConnection());
 	}
 	
-	public boolean isFull(){ return players.size == MAX_PLAYERS; }
+	public boolean isFull(){ return world.countPlayers() == MAX_PLAYERS; }
 	public World getWorld(){ return world; }	
 	public int getId(){ return id; }
 
 	public ServerPlayer findPlayerByConnection(Connection connection) {
-		for(ServerPlayer pl : players){
+		for(Player pl : world.getPlayers()){
 			if(pl.getConnection() == connection)
-				return pl;
+				return (ServerPlayer)pl;
 		}
 		
 		return null;
 	}
 
 	public ServerPlayer findPlayerById(int id) {
-		if(id == serverPlayer.getId()) return serverPlayer;
-		for(int i = 0; i < players.size; i++){
-			ServerPlayer pl = players.get(i);
-			if(pl.getId() == id)
-				return pl;
-		}
-		return null;
+		return (ServerPlayer)world.getPlayer(id);
 	}
 }

@@ -9,6 +9,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.World;
 
 public class LevelBoundsEntity extends Entity {
 
@@ -18,11 +19,11 @@ public class LevelBoundsEntity extends Entity {
 	}
 	
 	@Override
-	public void spawn(){
+	public void spawn(World world){
 		BodyDef bodyDef = new BodyDef();
 		bodyDef.type = BodyType.StaticBody;
 		
-		body(Eug.GetWorld().createBody(bodyDef));
+		body(world.getPhysicsWorld().createBody(bodyDef));
 		
 		float screenWidth = Gdx.graphics.getWidth() * SharedVars.WORLD_TO_BOX;
 		float screenHeight = Gdx.graphics.getHeight() * SharedVars.WORLD_TO_BOX;
@@ -56,7 +57,7 @@ public class LevelBoundsEntity extends Entity {
 		lineDef.shape = rightLine;
 		body().createFixture(lineDef);
 		
-		super.spawn();
+		super.spawn(world);
 	}
 
 }

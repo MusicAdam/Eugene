@@ -77,13 +77,12 @@ public abstract class ClientInput extends Message {
 	}
 	
 	//Do whatever this input was intended to do on the entity
-	public abstract void resolve(Player pl);
 	public void resolve(){
 		Player pl = Eug.FindPlayerById(targetPlayerId);
 		if(pl == null){
 			throw new NullPointerException("Player " + targetPlayerId + " doesn't exist");
 		}
-		resolve(pl);
+		pl.processInput(this);
 	}
 		
 	//For debug

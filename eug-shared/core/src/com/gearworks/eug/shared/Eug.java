@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.physics.box2d.World;
-import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.state.EntityState;
@@ -48,7 +48,6 @@ public class Eug extends ApplicationAdapter{
 	protected void destroy(Entity ent){ throw new NotImplementedException(); }
 	public static void Destroy(Entity ent)
 	{
-		EntityManager.EntityDestroyed(ent);
 		Get().destroy(ent);
 	}
 
@@ -106,5 +105,10 @@ public class Eug extends ApplicationAdapter{
 	protected List<Player> getPlayers(){ throw new NotImplementedException(); }
 	public static List<Player> GetPlayers(){
 		return Get().getPlayers();
+	}
+	
+	protected Camera getCamera(){ throw new NotImplementedException(); }
+	public static Camera GetCamera(){
+		return Get().getCamera();
 	}
 }
