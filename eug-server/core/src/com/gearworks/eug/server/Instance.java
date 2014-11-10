@@ -34,7 +34,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	public static long SNAPSHOT_DELAY  = 10; //Time in ms to wait before sending new snapshot
+	public static long SNAPSHOT_DELAY  = 0; //Time in ms to wait before sending new snapshot
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
@@ -109,7 +109,9 @@ public class Instance {
 		
 		if(pl == null) return;
 		
-		msg.resolve();
+		EugServer.OpenInstanceRequest(id);
+		msg.resolve(Eug.GetWorld());
+		EugServer.CloseInstanceRequest();
 	}
 
 	public void update(){
@@ -153,7 +155,9 @@ public class Instance {
 					
 					//Send snapshot to each player
 					if(pl.isValid()){						
-						if((Utils.generateTimeStamp() - previousState.getTimestamp()) >= SNAPSHOT_DELAY){ //(90 + Math.random() * 110) <- random latency in average latency range
+						if((Utils.generateTimeStamp() - world.getLatestSnapshot().getTimestamp()) >= SNAPSHOT_DELAY && world.getLatestSnapshot().getTimestamp() > pl.getValidationTimestamp()){ //(90 + Math.random() * 110) <- random latency in average latency range
+
+							System.out.println("Server ent count: " + Eug.GetEntities().size());
 							UpdateMessage msg = new UpdateMessage(world.getLatestSnapshot());
 							msg.sendUDP(pl.getConnection());
 							snapshotSent = true;

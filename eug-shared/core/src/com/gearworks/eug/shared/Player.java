@@ -39,20 +39,7 @@ public class Player {
 		this.validationTimestamp = state.getValidationTimestamp();
 		this.isInitialized = state.isInitialized();
 		this.isDisconnected = state.isDisconnected();
-	
-		
-		this.entities = new ArrayList<Entity>();
-		for(int entId : state.getEntityIds()){
-			Entity ent = Eug.FindEntityById(entId);
-			
-			if(ent != null){
-				addEntity(ent);
-				if(ent.getId() == state.getMyDiskId()){
-					this.myDisk = (DiskEntity)ent;
-				}
-			}
-		}
-		
+		entities = new ArrayList<Entity>();
 		inputs = new ArrayList<ClientInput>();
 	}
 	
@@ -64,6 +51,8 @@ public class Player {
 	
 	public void setInitialized(boolean flag){
 		isInitialized = flag;
+		
+		Debug.println("[Player:setInitialized] [" + id + "] " + flag);
 	}
 	
 	public boolean isDisconnected(){
@@ -72,6 +61,8 @@ public class Player {
 	
 	public void setDisconnected(boolean flag){
 		isDisconnected = flag;
+		
+		Debug.println("[Player:setDisconnected] [" + id + "] " + flag);
 	}
 	
 	public boolean isConnected(){
@@ -79,7 +70,10 @@ public class Player {
 	}
 	
 	public int getInstanceId(){ return instanceId; }
-	public void setInstanceId(int id){ instanceId = id; }
+	public void setInstanceId(int id){ 
+		instanceId = id;
+		Debug.println("[Player:setInstanceId] [" + id + "] " + id);
+	}
 	public Connection getConnection(){ 
 		return Eug.GetConnectionById(id);
 	}
@@ -166,7 +160,6 @@ public class Player {
 								validationTimestamp,
 								isInitialized,
 								isDisconnected,
-								entityIds,
 								(myDisk == null) ? -1 : myDisk.getId());
 	}
 	
@@ -176,5 +169,23 @@ public class Player {
 		Player otherPlayer = (Player)other;
 		
 		return otherPlayer.id == id;
+	}
+
+	public void snapToState(PlayerState plState) {
+		id = plState.getId();
+		if(getInstanceId() != plState.getInstanceId())
+			setInstanceId(plState.getInstanceId());
+		if(isInitialized() != plState.isInitialized())
+			setInitialized(plState.isInitialized());
+		if(isDisconnected() != plState.isDisconnected())
+			setDisconnected(plState.isDisconnected());
+		if(getValidationTimestamp() != plState.getValidationTimestamp())
+			setValidationTimestamp(plState.getValidationTimestamp());
+		if(myDisk == null){
+			myDisk = (DiskEntity)Eug.FindEntityById(plState.getMyDiskId());
+		}else if(myDisk.getId() != plState.getMyDiskId()){
+			myDisk = (DiskEntity)Eug.FindEntityById(plState.getMyDiskId());
+			
+		}
 	}
 }

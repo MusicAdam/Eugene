@@ -13,21 +13,21 @@ import com.gearworks.eug.shared.utils.CircularBuffer;
  */
 public class Simulator {
 	private class SimulationThread extends Thread {
+		World world;
 		Snapshot snapshot;
-		Array<SimulationRule> rules;
 		CircularBuffer<Snapshot> history;
 		long toTime;
 		boolean running = false;
 		
-		public SimulationThread(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history, Array<SimulationRule> rules){
+		public SimulationThread(World world, Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
 			this.snapshot = snapshot;
-			this.rules = rules;
 			this.toTime = toTime;
+			this.world = world;
+			this.history = history;
 		}
 		
 		@Override
 		public void run(){
-			System.out.println("SIMULATION THREAD");
 			long simTime = snapshot.getTimestamp(); //Start simulation at the time of the snapshot
 			
 			long step = (long)(SharedVars.STEP * 1000); //Convert STEP to miliseconds 		
@@ -35,17 +35,27 @@ public class Simulator {
 			synchronized(lock){
 				//Run simulation
 				running = true;
+
+				int inc = 0;
+				world.snapToSnapshot(snapshot);
+				
 				while(simTime < toTime){
 					//If there isn't a full step left, calculate partial step
 					if(simTime + step > toTime)
 						step = toTime - simTime;
 					
-					//Apply Rules
-					for(SimulationRule rule : rules){
-						rule.apply(snapshot, step);
+					if(!history.isEmpty()){					
+						while(history.peek(inc).getTimestamp() < simTime){
+							while(!history.peek(inc).getClientInput().isEmpty()){
+								history.peek(inc).getClientInput().pop().resolve(world);
+							}
+						}
 					}
 	
+					world.update(step);
+					
 					simTime += step; //Step time forward
+					snapshot = world.generateSnapshot(-1);
 					snapshot.setTimestamp(simTime);				
 				}
 				running = false;
@@ -58,12 +68,14 @@ public class Simulator {
 		}
 	}
 	
-	private Array<SimulationRule> rules = new Array<SimulationRule>();
 	public Object lock = new Object();
 	private SimulationThread thread;
-	private Snapshot result;
+	private World world;
 
-	public Simulator(){	}
+	public Simulator(){	
+		world = new World(-1);
+		world.simulator = true;
+	}
 	
 	//Runs a simulation with the given parameters
 	public void simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> historyParam){
@@ -82,7 +94,7 @@ public class Simulator {
 			history.pop();
 		}
 		
-		thread = new SimulationThread(snapshot, toTime, history, rules);
+		thread = new SimulationThread(world, snapshot, toTime, history);
 		thread.start();
 	}
 	
@@ -92,22 +104,14 @@ public class Simulator {
 		return thread.isAlive();
 	}
 	
-	public Snapshot getResult(){
-		if(thread == null && result == null) return null;
-		if(!thread.isAlive() && result == null){
-			result = thread.getResult();
+	public Snapshot getResult(){		
+		if(isRunning()) return null;
+		if(thread == null) return null;
+		
+		Snapshot result = thread.getResult();
+		if(result != null)
 			thread = null;
-		}
 		
 		return result;
-	}
-	
-	public SimulationRule addRule(SimulationRule rule){
-		synchronized(lock){
-			rules.add(rule);
-			return rule;
-		}
-	}
-	
-	
+	}	
 }

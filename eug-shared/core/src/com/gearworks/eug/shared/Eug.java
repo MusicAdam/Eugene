@@ -18,6 +18,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  */
 public class Eug extends ApplicationAdapter{
 	private static Eug singleton;
+	private static String mainThreadName; //This is the name of the thread that initialize is called on. Should be called by the user on the main thread.
+	
 	public Object playerLock = new Object();
 	public Object messageLock = new Object();
 	public Object entityLock = new Object();
@@ -30,6 +32,14 @@ public class Eug extends ApplicationAdapter{
 	public static void Set(Eug e)
 	{
 		singleton = e;
+	}
+	
+	public static void Initialize(){
+		mainThreadName = Thread.currentThread().getName();
+	}
+	
+	public static boolean OnMainThread(){
+		return mainThreadName.equals(Thread.currentThread().getName());
 	}
 
 	protected World getWorld(){ throw new NotImplementedException(); }

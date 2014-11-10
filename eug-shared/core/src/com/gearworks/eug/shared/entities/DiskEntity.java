@@ -112,7 +112,11 @@ public class DiskEntity extends Entity {
 	
 	@Override
 	public void spawn(World world){
-		setSprite("disk.png");
+		if(!world.isSimulation()){
+			setSprite("disk.png");
+		}else{
+			spriteResource  = "disk.png";
+		}
 		
 		//Create body def
 		BodyDef bodyDef = new BodyDef();
@@ -126,7 +130,12 @@ public class DiskEntity extends Entity {
 		
 		//Create Fixture
 		CircleShape unitShape = new CircleShape();
-		unitShape.setRadius((sprite.getWidth()/2) * SharedVars.WORLD_TO_BOX );
+		//TODO: This is a horrible way to fix this problem.
+		if(!world.isSimulation()){
+			unitShape.setRadius((sprite.getWidth()/2) * SharedVars.WORLD_TO_BOX );
+		}else{
+			unitShape.setRadius(16 * SharedVars.WORLD_TO_BOX );			
+		}
 		
 		FixtureDef fix = new FixtureDef();
 		fix.shape = unitShape;

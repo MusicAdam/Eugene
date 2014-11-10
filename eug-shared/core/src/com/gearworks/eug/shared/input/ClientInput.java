@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
+import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.state.Snapshot;
@@ -77,8 +78,8 @@ public abstract class ClientInput extends Message {
 	}
 	
 	//Do whatever this input was intended to do on the entity
-	public void resolve(){
-		Player pl = Eug.FindPlayerById(targetPlayerId);
+	public void resolve(World world){
+		Player pl = world.getPlayer(targetPlayerId);
 		if(pl == null){
 			throw new NullPointerException("Player " + targetPlayerId + " doesn't exist");
 		}

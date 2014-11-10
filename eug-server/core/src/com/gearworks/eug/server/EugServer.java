@@ -60,6 +60,7 @@ public class EugServer extends Eug {
 	 */
 	@Override
 	public void create () {	
+		Eug.Initialize();
 		
 		/*
 		 * Initialize networking infrastructure

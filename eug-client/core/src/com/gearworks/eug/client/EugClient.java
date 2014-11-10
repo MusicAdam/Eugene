@@ -90,6 +90,8 @@ public class EugClient extends Eug {
 	 */
 	@Override
 	public void create () {	
+		Eug.Initialize();
+		
 		ui = new UserInterface();
 		
 		Gdx.input.setInputProcessor(ui);

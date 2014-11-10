@@ -27,9 +27,22 @@ public class World {
 	ShapeRenderer							shapeRenderer;
 	CircularBuffer<Snapshot>				history;
 	Snapshot 								latestSnapshot;
-	ConcurrentLinkedQueue<Entity>			spawnQueue = new ConcurrentLinkedQueue<Entity>();
 	int										instanceId;
-	Object 									spawnLock = new Object();
+	
+	//Entity queues
+	ConcurrentLinkedQueue<Entity>			entitySpawnQueue = new ConcurrentLinkedQueue<Entity>();
+	ConcurrentLinkedQueue<Entity>			entityDeleteQueue = new ConcurrentLinkedQueue<Entity>();
+	//Player queues
+	ConcurrentLinkedQueue<Player>			playerAddQueue = new ConcurrentLinkedQueue<Player>();
+	ConcurrentLinkedQueue<Player>			playerDeleteQueue = new ConcurrentLinkedQueue<Player>();
+	
+	
+	//Entity locks
+	Object 									entitySpawnLock = new Object();
+	Object 									entityDeleteLock = new Object();
+	//Player locks
+	Object 									playerAddLock = new Object();
+	Object									playerDeleteLock = new Object();
 	boolean simulator;
 	
 	public World(int instanceId){
@@ -51,27 +64,56 @@ public class World {
 	public void update(float step){
 		box2dWorld.step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
-		latestSnapshot = generateSnapshot(instanceId);
+		//TODO: Generate a new snapshot over a period of time as opposed to every frame to improve framerate. (May reduce correction/prediction accuracy)
+		if(!simulator)
+			latestSnapshot = generateSnapshot(instanceId);
 		
-		synchronized(spawnLock){
-			while(!spawnQueue.isEmpty())
-				spawn(spawnQueue.poll());
+		//
+		//Process new players
+		synchronized(playerAddLock){
+			while(!playerAddQueue.isEmpty())
+				addPlayer(playerAddQueue.poll());			
 		}
 		
-		for(Player player : Eug.GetPlayers()){
-			for(ClientInput input : player.getInputs()){
-				latestSnapshot.pushInput(input);
-			}
-			
-			player.clearInputs();
-			
-			for(Entity ent : player.getEntities()){
-				if(ent.isSpawned())
-					ent.update();
+		//
+		//Process deleted players
+		synchronized(playerDeleteLock){
+			while(!playerDeleteQueue.isEmpty())
+				addPlayer(playerDeleteQueue.poll());			
+		}
+		
+		//
+		//Process new entities
+		synchronized(entitySpawnLock){
+			while(!entitySpawnQueue.isEmpty())
+				spawn(entitySpawnQueue.poll());
+		}
+		
+		//
+		//Process new entities
+		synchronized(entityDeleteLock){
+			while(!entityDeleteQueue.isEmpty()){
+				destroy(entityDeleteQueue.poll());
 			}
 		}
 		
-		history.push(latestSnapshot);
+		if(!simulator){
+			for(Player player : Eug.GetPlayers()){
+				for(ClientInput input : player.getInputs()){
+					latestSnapshot.pushInput(input);
+				}
+				
+				player.clearInputs();
+				
+				for(Entity ent : player.getEntities()){
+					if(ent.isSpawned())
+						ent.update();
+				}
+			}
+		}
+		
+		if(!simulator)
+			history.push(latestSnapshot);
 	}
 	
 	public void render(){
@@ -118,6 +160,8 @@ public class World {
 		HashSet<Integer> localEntitySet = new HashSet<Integer>();
 		
 		if(isSynchronized(snapshot, serverPlayerSet, localPlayerSet, serverEntitySet, localEntitySet)) return;
+		
+		System.out.println("NOT SYNCED");
 		
 		//Get the serverPLayers - localPlayers to find which players have connected
 		HashSet<Integer> newPlayers = new HashSet<Integer>(serverPlayerSet);
@@ -234,8 +278,8 @@ public class World {
 	}
 	
 	public Entity spawn(Entity ent){
-		if(Thread.currentThread().getName().equals(SharedVars.MAIN_THREAD)){
-			synchronized(spawnLock){
+		if(Eug.OnMainThread() || simulator){
+			synchronized(entitySpawnLock){
 				if(ent.getPlayer().isValid()){
 					Debug.println("[World:spawn] entity " + ent.getId());
 					
@@ -250,36 +294,70 @@ public class World {
 				}
 			}
 		}else{
-			synchronized(spawnLock){
-				spawnQueue.add(ent);
+			synchronized(entitySpawnLock){
+				entitySpawnQueue.add(ent);
 			}
 		}
 		return null;
 	}
 	
 	public void destroy(Entity ent){
-		if(!entityMap.containsKey(ent.getId())) return;
-		entityMap.remove(ent.getId());	
-		ent.dispose();	
-
-		for(EntityEventListener listener : entityEventListeners){
-			listener.onDestroy(ent);
+		if(Eug.OnMainThread() || simulator){
+			synchronized(entityDeleteLock){
+				if(!entityMap.containsKey(ent.getId())) return; //TODO: Is this necessary?
+				
+				entityMap.remove(ent.getId());	
+				ent.dispose();	
+		
+				for(EntityEventListener listener : entityEventListeners){
+					listener.onDestroy(ent);
+				}
+				
+				Debug.println("[World:destroy] Entity " + ent.getId() + " deleted");
+			}
+		}else{
+			synchronized(entityDeleteLock){
+				entityDeleteQueue.add(ent);
+				Debug.println("[World:destroy] Entity " + ent.getId() + " queued for deletion");
+			}
 		}
 	}
 	
 	public Player addPlayer(Player pl){
-		if(!players.contains(pl)){
-			players.add(pl);
-			Debug.println("[World:addPlayer] Player " + pl.getId() + " added");
+		if(Eug.OnMainThread() || simulator){
+			synchronized(playerAddLock){
+				if(!players.contains(pl)){
+					players.add(pl);
+					Debug.println("[World:addPlayer] Player " + pl.getId() + " added");
+				}
+				
+				return pl;
+			}
+		}else{
+			synchronized(playerAddLock){
+				playerAddQueue.add(pl);
+			}
 		}
-		return pl;
+		
+		return null;
 	}
 	
 	public boolean removePlayer(Player pl){
-		if(players.remove(pl)){
-			Debug.println("[World:removePlayer] Player " + pl.getId() + " removed");
-			return true;
+		if(Eug.OnMainThread() || simulator){
+			synchronized(playerDeleteLock){
+				if(players.remove(pl)){
+					Debug.println("[World:removePlayer] Player " + pl.getId() + " removed");
+					return true;
+				}
+				
+				return false;
+			}
+		}else{
+			synchronized(playerDeleteLock){
+				playerDeleteQueue.add(pl);
+			}
 		}
+		
 		return false;
 	}
 	
@@ -344,7 +422,9 @@ public class World {
 		return null;
 	}
 	
-	public Snapshot getLatestSnapshot(){ return latestSnapshot; }
+	public CircularBuffer<Snapshot> getHistory(){ return history; }
+	
+	public Snapshot getLatestSnapshot(){ return history.peek(); }
 	public void setInstanceId(int id){ instanceId = id; }
 
 	public EntityEventListener addEntityListener(EntityEventListener entityEventListener) {
@@ -364,5 +444,9 @@ public class World {
 		}
 		
 		return playerStates;
+	}
+
+	public boolean isSimulation() {
+		return simulator;
 	}
 }

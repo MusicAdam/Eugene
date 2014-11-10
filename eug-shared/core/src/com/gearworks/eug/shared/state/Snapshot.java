@@ -37,7 +37,7 @@ public class Snapshot {
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
 		instanceId = -1;
-		entityStates = null;
+		entityStates = new EntityState[0];
 	}
 
 	public Snapshot(int instanceId, PlayerState[] players, EntityState[] entityStates) {
@@ -58,6 +58,13 @@ public class Snapshot {
 				this.entityStates[i] = new EntityState(cpy.entityStates[i]);
 			}
 		}
+		
+		if(cpy.players != null){
+			this.players = new PlayerState[cpy.players.length];
+			for(int i = 0; i < cpy.players.length; i++){
+				this.players[i] = new PlayerState(cpy.players[i]);
+			}
+		}
 	}
 	
 	public int getInstanceId() { return instanceId;	}
@@ -69,15 +76,18 @@ public class Snapshot {
 	 * 		probably only worth it if we are expecting to have a lot of entities.
 	 */
 	public EntityState getEntityState(int id) {
+		if(entityStates == null) return null;
 		for(int i = 0; i < entityStates.length; i++){
 			if(entityStates[i].getId() == id)
 				return entityStates[i];
 		}
-		System.out.println("ENT " + id + " NOT FOUND");
+
 		return null;
 	}
 
-	public static boolean Compare(Snapshot serverSnapshot, Snapshot simulatedState) {		
+	public static boolean Compare(Snapshot serverSnapshot, Snapshot simulatedState) {	
+		if(serverSnapshot == null || simulatedState == null) return false;
+		
 		for(int i = 0; i < serverSnapshot.entityStates.length; i++){
 			if(!EntityState.Compare(serverSnapshot.entityStates[i], simulatedState.getEntityState(serverSnapshot.entityStates[i].getId())))
 				return false;
