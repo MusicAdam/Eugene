@@ -3,6 +3,7 @@ package com.gearworks.eug.client.state;
 import java.nio.Buffer;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
@@ -59,7 +60,9 @@ public class GameState implements State {
 	private int tick;
 	private Snapshot latestSnapshot;
 	private Snapshot latestServerSnapshot;
+	private Snapshot latestSimulatedServerSnapshot;
 	private Snapshot latestSimulatedSnapshot;
+	private Snapshot latestRelatedSnapshot;
 	private int forceResetLimit = 2; //Updates until we decide correction has failed and we need to snap to server state.
 	private int forceResetCount = 0; //Number of updates we remain out of sync
 	
@@ -68,7 +71,8 @@ public class GameState implements State {
 	private long frameStart = 0;
 	private long frameTimeSum = 0;
 	
-	private DiskEntity testEnt;
+	
+	private ConcurrentLinkedQueue<Snapshot> serverUpdateQueue = new ConcurrentLinkedQueue<Snapshot>();
 
 	@Override
 	public boolean canEnterState() {
@@ -137,13 +141,29 @@ public class GameState implements State {
 			latestServerSnapshot.render(EugClient.GetSpriteBatch());
 			EugClient.GetSpriteBatch().setColor(old);
 		}
+		/*
+		if(latestSimulatedServerSnapshot != null){
+			Color old = EugClient.GetSpriteBatch().getColor();
+			EugClient.GetSpriteBatch().setColor(0, 1, 0, .8f);
+			latestSimulatedServerSnapshot.render(EugClient.GetSpriteBatch());
+			EugClient.GetSpriteBatch().setColor(old);
+		}*/
 		
+		/*
 		if(latestSimulatedSnapshot != null){
 			Color old = EugClient.GetSpriteBatch().getColor();
 			EugClient.GetSpriteBatch().setColor(0, 1, 0, .8f);
 			latestSimulatedSnapshot.render(EugClient.GetSpriteBatch());
 			EugClient.GetSpriteBatch().setColor(old);
 		}
+		*/
+		if(latestRelatedSnapshot != null){
+			Color old = EugClient.GetSpriteBatch().getColor();
+			EugClient.GetSpriteBatch().setColor(0, 0, 1, .8f);
+			latestRelatedSnapshot.render(EugClient.GetSpriteBatch());
+			EugClient.GetSpriteBatch().setColor(old);			
+		}
+		
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -166,7 +186,8 @@ public class GameState implements State {
 			}		
 			Snapshot correctedState = null;
 			if((correctedState = simulator.getResult()) != null){
-				Eug.GetWorld().snapToSnapshot(correctedState);
+				//Eug.GetWorld().snapToSnapshot(correctedState, "GameState:Update");
+				latestSimulatedServerSnapshot = correctedState;
 			}
 			
 			//Remove init scene message and registry update message if it still needs to be done.
@@ -221,14 +242,12 @@ public class GameState implements State {
 		InitializeSceneMessage ack = new InitializeSceneMessage(EugClient.GetPlayer().getInstanceId(), null);
 		ack.sendUDP(EugClient.GetPlayer().getConnection());
 		
-		testEnt = (DiskEntity) Eug.Spawn(new DiskEntity(EugClient.GetInstanceId(), EugClient.GetPlayer()));
-		
 		Debug.println("[EugClient:initializeScene] Scene initialized and response sent.");
 	}
 	
 	protected void serverUpdate(UpdateMessage msg) {
 		if(!EugClient.GetPlayer().isValid()) return;
-		
+
 		Snapshot serverSnapshot = msg.getSnapshot();
 		latestServerSnapshot = serverSnapshot;
 		
@@ -243,21 +262,25 @@ public class GameState implements State {
 			if(!pl.getState().equals(plState)){
 				pl.snapToState(plState);
 			}
-		}
+		}		
 		
-		//This gets rid of all saved snapshots from before the latest server snapshot.
-		while(Eug.GetWorld().getHistory().peek() != null && Eug.GetWorld().getHistory().peek().getTimestamp() < serverSnapshot.getTimestamp()){
-			if(Eug.GetWorld().getHistory().count() == 1) break;
-			Eug.GetWorld().getHistory().pop();
-		}
-		
-		System.out.println("Client ent count: " + Eug.GetEntities().size());
-		if (true) return;
 		if(simulator.isRunning()) return; //Don't update while previous correction is still calculating
+
+		Snapshot localSnapshot = Eug.GetWorld().pruneHistory(serverSnapshot.getTimestamp()); 
+		//Queue the server snapshot because we haven't completed a full frame since the last update
+		if(localSnapshot == null){
+			System.out.println("NULL");
+			serverUpdateQueue.add(serverSnapshot);
+			return;
+		}
 		
-		Snapshot simulatedState = null;
-		Snapshot localSnapshot = Eug.GetWorld().getHistory().peek(); 
-		
+		if(!serverUpdateQueue.isEmpty()){
+			Snapshot tmpSnap = serverUpdateQueue.poll();
+			serverUpdateQueue.add(serverSnapshot);
+			serverSnapshot = tmpSnap;
+		}
+
+		/*
 		if(localSnapshot.getTimestamp() < serverSnapshot.getTimestamp()){ //If our local history is behind the server, simulate to where the server is.
 			simulator.simulate(localSnapshot, serverSnapshot.getTimestamp(), Eug.GetWorld().getHistory());
 			
@@ -265,6 +288,7 @@ public class GameState implements State {
 			while(simulator.isRunning()){} 			
 					
 			localSnapshot = simulator.getResult();
+			System.out.println("Local was behind our latest server snap, simulating that to the future, but not beyond.");
 		}else if(localSnapshot.getTimestamp() > serverSnapshot.getTimestamp()){ //If our local history is ahead of the server, simulate server to where we are
 			simulator.simulate(serverSnapshot, localSnapshot.getTimestamp(), Eug.GetWorld().getHistory());
 			
@@ -272,11 +296,25 @@ public class GameState implements State {
 			while(simulator.isRunning()){}
 			
 			serverSnapshot = simulator.getResult();
-			System.out.println("Getting result: " + serverSnapshot);
-		}
+			
+			System.out.println("Server was behind our closest local history, simulating that to the future, but not beyond.");
+		}*/
+
+		latestRelatedSnapshot = localSnapshot;
+		latestSimulatedServerSnapshot = serverSnapshot;
 		
+		
+		System.out.println("latestTime: " + Eug.GetWorld().getLatestSnapshot().getTimestamp() + "\nlocalSnapshotTimestamp: " + localSnapshot.getTimestamp() + "\nserverSnapshotTimestamp: " + serverSnapshot.getTimestamp());
+		/*if(localSnapshot.getTimestamp() != serverSnapshot.getTimestamp()){
+			try {
+				throw new Exception("SNAPSHOTS NOT SIM CORRECTERED");
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}*/
+				
 		if(!Snapshot.Compare(serverSnapshot, localSnapshot)){	//If the serverSnapshot and the localSnapshot don't match, calculate a corrected state
-			System.out.println("Client/Server out of sync, simulating correction...");
 			simulator.simulate(serverSnapshot, Eug.GetWorld().getLatestSnapshot().getTimestamp(), Eug.GetWorld().getHistory());
 		}
 	}

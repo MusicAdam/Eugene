@@ -34,7 +34,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Instance {
 	public static int MAX_PLAYERS = 4;
 	public static long VALIDATION_DELAY = 100; //Time in miliseconds to wait before resending instance validaiton
-	public static long SNAPSHOT_DELAY  = 0; //Time in ms to wait before sending new snapshot
+	public static long SNAPSHOT_DELAY  = 100; //Time in ms to wait before sending new snapshot
 	
 	private int id;
 	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
@@ -42,7 +42,7 @@ public class Instance {
 	private Queue<ServerPlayer> 	removePlayerQueue;
 	private Box2DDebugRenderer b2ddbgRenderer; 
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
-	private Snapshot previousState;
+	private Snapshot lastSnapshotSent;
 
 	public Instance(int id)
 	{
@@ -50,12 +50,12 @@ public class Instance {
 		this.id = id;
 		b2ddbgRenderer = new Box2DDebugRenderer();
 		removePlayerQueue = new ConcurrentLinkedQueue<ServerPlayer>();
-		world = new World(id);
+		world = new World("InstanceWorld", id);
 		serverPlayer = new ServerPlayer(-1);
 		serverPlayer.setInitialized(true);
 		serverPlayer.setInstanceId(id);
 		world.addPlayer(serverPlayer);
-		previousState = world.generateSnapshot(id);
+		lastSnapshotSent = world.generateSnapshot();
 		tick = 0;
 		
 		//Setup message handlers
@@ -154,12 +154,24 @@ public class Instance {
 					}
 					
 					//Send snapshot to each player
-					if(pl.isValid()){						
-						if((Utils.generateTimeStamp() - world.getLatestSnapshot().getTimestamp()) >= SNAPSHOT_DELAY && world.getLatestSnapshot().getTimestamp() > pl.getValidationTimestamp()){ //(90 + Math.random() * 110) <- random latency in average latency range
-
-							System.out.println("Server ent count: " + Eug.GetEntities().size());
-							UpdateMessage msg = new UpdateMessage(world.getLatestSnapshot());
-							msg.sendUDP(pl.getConnection());
+					if(pl.isValid()){					
+						if((Utils.generateTimeStamp() - pl.getLastSnapshotTimestamp()) >= SNAPSHOT_DELAY && world.getLatestSnapshot().getTimestamp() > pl.getValidationTimestamp()){ //(90 + Math.random() * 110) <- random latency in average latency range
+								
+							final UpdateMessage msg = new UpdateMessage(world.getLatestSnapshot());
+							pl.setLastSnapshotTimestamp(world.getLatestSnapshot().getTimestamp());
+							final Player spl = pl;
+							new Thread(){
+								@Override
+								public void run(){
+									try {
+										Thread.sleep(1000);
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+									msg.sendUDP(spl.getConnection());
+								}
+							}.start();
 							snapshotSent = true;
 						}
 					}
@@ -173,7 +185,7 @@ public class Instance {
 		}
 		
 		if(snapshotSent){
-			previousState = world.getLatestSnapshot();
+			lastSnapshotSent = world.getLatestSnapshot();
 		}
 		
 		//Remove disconnected players

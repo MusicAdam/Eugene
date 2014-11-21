@@ -125,7 +125,7 @@ public class EugClient extends Eug {
 		/*
 		 * Initialize states		
 		 */
-		world = new World(-1);
+		world = new World("ClientWorld", -1);
 		sm = new StateManager();
 		sm.setState(new ConnectState()); //Set initial state
 		

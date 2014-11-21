@@ -24,6 +24,7 @@ public class Simulator {
 			this.toTime = toTime;
 			this.world = world;
 			this.history = history;
+			this.setName("SimulationThread-" + world.getName());
 		}
 		
 		@Override
@@ -31,33 +32,43 @@ public class Simulator {
 			long simTime = snapshot.getTimestamp(); //Start simulation at the time of the snapshot
 			
 			long step = (long)(SharedVars.STEP * 1000); //Convert STEP to miliseconds 		
-
+			
+			float predicted = (float)(toTime - simTime) / (float)step;
+			
 			synchronized(lock){
 				//Run simulation
 				running = true;
 
-				int inc = 0;
-				world.snapToSnapshot(snapshot);
-				
+				world.snapToSnapshot(snapshot, "simulator");
+				int count = 0;
 				while(simTime < toTime){
 					//If there isn't a full step left, calculate partial step
 					if(simTime + step > toTime)
 						step = toTime - simTime;
 					
-					if(!history.isEmpty()){					
-						while(history.peek(inc).getTimestamp() < simTime){
-							while(!history.peek(inc).getClientInput().isEmpty()){
-								history.peek(inc).getClientInput().pop().resolve(world);
+					synchronized(world.historyLock){
+						int inc = 0;
+						while(!history.isEmpty() && history.peek(inc).getTimestamp() < simTime){
+							Snapshot snap = history.peek(inc);
+							int snapInc = 0;
+							while(!snap.getClientInput().isEmpty() && snap.getClientInput().count() > snapInc){
+								snap.getClientInput().peek(snapInc).resolve(world);
+								snapInc++;
 							}
+							inc++;
 						}
 					}
 	
-					world.update(step);
+					world.update(SharedVars.STEP);
 					
 					simTime += step; //Step time forward
-					snapshot = world.generateSnapshot(-1);
-					snapshot.setTimestamp(simTime);				
+					count++;
 				}
+				
+				snapshot = world.generateSnapshot();
+				snapshot.setTimestamp(simTime);		
+				
+				System.out.println("Simulated " + count + " predicted " + predicted);
 				running = false;
 			}
 		}
@@ -73,26 +84,13 @@ public class Simulator {
 	private World world;
 
 	public Simulator(){	
-		world = new World(-1);
-		world.simulator = true;
+		world = new World("Sim world", -1, true);
 	}
 	
 	//Runs a simulation with the given parameters
-	public void simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> historyParam){
+	public void simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
 		//Make copies of the data as it will be changing outside of the simulator
 		snapshot = new Snapshot(snapshot);
-		CircularBuffer<Snapshot> history = new CircularBuffer<Snapshot>(historyParam.size());
-		
-		int inc = 0;
-		while(inc < historyParam.count()){
-			history.push(new Snapshot(historyParam.peek(inc)));
-			inc++;
-		}
-		
-		//Prune out old data
-		while(history.peek() != null && history.peek().getTimestamp() < snapshot.getTimestamp()){
-			history.pop();
-		}
 		
 		thread = new SimulationThread(world, snapshot, toTime, history);
 		thread.start();

@@ -19,6 +19,7 @@ import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
 
 public class World {
+	String name;
 	ArrayList<EntityEventListener>			entityEventListeners = new ArrayList<EntityEventListener>();
 	HashMap<Integer, Entity> 				entityMap = new HashMap<Integer, Entity>();
 	com.badlogic.gdx.physics.box2d.World 	box2dWorld;
@@ -43,16 +44,20 @@ public class World {
 	//Player locks
 	Object 									playerAddLock = new Object();
 	Object									playerDeleteLock = new Object();
-	boolean simulator;
+	//History lock
+	Object									historyLock = new Object();
+	private boolean simulator;
 	
-	public World(int instanceId){
+	public World(String name, int instanceId){
 		box2dWorld = new com.badlogic.gdx.physics.box2d.World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
 		spriteBatch = new SpriteBatch();
 		shapeRenderer = new ShapeRenderer();
 		history = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
+		this.name = name;
 	}
 	
-	public World(int instanceId, boolean sim){
+	public World(String name, int instanceId, boolean sim){
+		this.name = name;
 		simulator = sim;
 		box2dWorld = new com.badlogic.gdx.physics.box2d.World(SharedVars.GRAVITY, SharedVars.DO_SLEEP);
 		if(!sim){
@@ -62,11 +67,6 @@ public class World {
 	}
 	
 	public void update(float step){
-		box2dWorld.step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
-		
-		//TODO: Generate a new snapshot over a period of time as opposed to every frame to improve framerate. (May reduce correction/prediction accuracy)
-		if(!simulator)
-			latestSnapshot = generateSnapshot(instanceId);
 		
 		//
 		//Process new players
@@ -90,30 +90,35 @@ public class World {
 		}
 		
 		//
-		//Process new entities
+		//Process deleted entities
 		synchronized(entityDeleteLock){
 			while(!entityDeleteQueue.isEmpty()){
 				destroy(entityDeleteQueue.poll());
 			}
 		}
 		
+		box2dWorld.step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
+		
 		if(!simulator){
-			for(Player player : Eug.GetPlayers()){
-				for(ClientInput input : player.getInputs()){
-					latestSnapshot.pushInput(input);
+			synchronized(historyLock){
+				history.push(generateSnapshot());
+				latestSnapshot = history.peekTail();
+				
+				for(Player player : Eug.GetPlayers()){
+					for(ClientInput input : player.getInputs()){
+						latestSnapshot.pushInput(input);
+					}
+					
+					player.clearInputs();
+					
+					for(Entity ent : player.getEntities()){
+						if(ent.isSpawned())
+							ent.update();
+					}
 				}
 				
-				player.clearInputs();
-				
-				for(Entity ent : player.getEntities()){
-					if(ent.isSpawned())
-						ent.update();
-				}
 			}
 		}
-		
-		if(!simulator)
-			history.push(latestSnapshot);
 	}
 	
 	public void render(){
@@ -134,13 +139,14 @@ public class World {
 		}
 	}
 	
-	public void snapToSnapshot(Snapshot snapshot){
+	public void snapToSnapshot(Snapshot snapshot, String from){
+		System.out.println(name + ": snap to snapshot from " + from);
 		synchronizeSnapshot(snapshot);
 		
 		for(EntityState state : snapshot.getEntityStates()){
-			Entity ent = Eug.FindEntityById(state.getId());
+			Entity ent = getEntity(state.getId());
 			try {
-				ent.snapToState(state);
+				ent.snapToState(state, "[" + getName() + "] World.snapToSnapshot");
 			} catch (EntityUpdateException e) {
 				e.printStackTrace();
 			}
@@ -361,10 +367,10 @@ public class World {
 		return false;
 	}
 	
-	public Snapshot generateSnapshot(int instanceId) {
+	public Snapshot generateSnapshot() {
 		PlayerState[] playerStates = new PlayerState[players.size()];
 		int i = 0;
-		for(Player pl : Eug.GetPlayers()){
+		for(Player pl : players){
 			playerStates[i] = pl.getState();
 			i++;
 		}
@@ -424,7 +430,7 @@ public class World {
 	
 	public CircularBuffer<Snapshot> getHistory(){ return history; }
 	
-	public Snapshot getLatestSnapshot(){ return history.peek(); }
+	public Snapshot getLatestSnapshot(){ return latestSnapshot; }
 	public void setInstanceId(int id){ instanceId = id; }
 
 	public EntityEventListener addEntityListener(EntityEventListener entityEventListener) {
@@ -448,5 +454,19 @@ public class World {
 
 	public boolean isSimulation() {
 		return simulator;
+	}
+	
+	public String getName(){ return name; }
+
+	public Snapshot pruneHistory(long timestamp) {
+		int count = history.count();
+		System.out.println("Before: " + count);
+		System.out.println("isEmpty: " + history.isEmpty());
+		while(!history.isEmpty() && history.peek().getTimestamp() < timestamp){
+			history.pop();
+		}
+
+		System.out.println("After: " + count);
+		return history.peek();
 	}
 }

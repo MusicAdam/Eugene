@@ -20,6 +20,7 @@ public class Player {
 	private int 	instanceId;			//Reference to instance this player belongs to 
 	private int 	id; 			//id associated with player's connection to the server
 	private long	validationTimestamp; 	//Last time AssignInstanceMessage was sent
+	private long	lastSnapshotTimestamp; //The last time the player received as snapshot clientside or was sent a snapshot serverside (not included in player state as it is different client/server side
 	private boolean isInitialized = false;			//True when the initial snapshot has been successfully sent to the player
 	private boolean isDisconnected = false; //When true player will be removed from idle players/instances
 	private transient ArrayList<Entity> entities;
@@ -188,4 +189,7 @@ public class Player {
 			
 		}
 	}
+	
+	public void setLastSnapshotTimestamp(long ts){ lastSnapshotTimestamp = ts; }
+	public long getLastSnapshotTimestamp(){ return lastSnapshotTimestamp; }
 }

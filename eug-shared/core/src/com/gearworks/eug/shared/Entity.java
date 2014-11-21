@@ -1,5 +1,7 @@
 package com.gearworks.eug.shared;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -55,6 +57,7 @@ public class Entity {
 	private boolean isNew = true;
 	private EntityState spawnState; //Used to maintain spawn state for delayed spawn when created on update thread
 	private EntityState snapToState; //Used to snap to a state from another thread.
+	private World world; //The world in which this entity was spawned.
 	
 	public Entity(int id, Player player){
 		this.id = id;
@@ -134,7 +137,7 @@ public class Entity {
 		
 		if(snapToState != null){
 			try {
-				snapToState(snapToState);
+				snapToState(snapToState, "[" + world.getName() + "] Entity.update");
 			} catch (EntityUpdateException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -169,12 +172,14 @@ public class Entity {
 	public void spawn(World world){
 		if(spawnState != null){
 			try {
-				snapToState(spawnState);
+				snapToState(spawnState, "[" + world.getName() + "] Entity.spawn");
 			} catch (EntityUpdateException e) {
 				e.printStackTrace();
 			}
 			spawnState = null;
 		}
+		
+		this.world = world;
 	}
 	
 	public Vector2 size(){ 
@@ -323,75 +328,73 @@ public class Entity {
 	 * Updates the entities sprite to the given resource.
 	 */
 	public void updateSprite(String resource){
-		
+		throw new NotImplementedException(); //Does this even require implementation? See: setSprite
 	}
 	
-	public void snapToState(EntityState state) throws EntityUpdateException{
-		if(Eug.OnMainThread()){
-			//Update entity's owner
-			if(getPlayer().getId() != state.getPlayerId()){
-				Player player = Eug.FindPlayerById(state.getPlayerId());
-				
-				if(player == null) throw new EntityUpdateException("Could not update entity " + state.getId() + ": New player " + state.getPlayerId() + " doesn't exist");
-				
-				setPlayer(player);
-			}
+	public void snapToState(EntityState state, String from) throws EntityUpdateException{
+		//Update entity's owner
+		System.out.println("Snapping to state in world: " + world.getName() + " from: " + from);
+		if(getPlayer().getId() != state.getPlayerId()){
+			Player player = world.getPlayer(state.getPlayerId());
 			
-			//Update sprite
-			//This needs to be queued if we are on update thread, to ensure it is run on the render thread..
-			if(getSpriteResource() != null && !getSpriteResource().equals(state.getSpriteResource())){
-				setSprite(state.getSpriteResource());
-			}
+			if(player == null) throw new EntityUpdateException("Could not update entity " + state.getId() + ": New player " + state.getPlayerId() + " doesn't exist");
 			
-			//Update fixtures
-			//TODO: I don't think this method of id'ing will work (need to set it in UserData probably)
-			//TODO: Will not destroy fixtures if they no longer exist... related to ^^
-			for(NetworkedFixture nFix : state.getBodyState().getFixtureList()){
-				try{
-					Fixture fix = body().getFixtureList().get(nFix.getId());
-					fix.setDensity(nFix.getDensity());
-					fix.setFilterData(nFix.getFilterData());
-					fix.setFriction(nFix.getFriction());
-					fix.setRestitution(nFix.getRestitution());
-				}catch(IndexOutOfBoundsException e){//Create it if it doesn't exist
-					FixtureDef fixDef = new FixtureDef();
-					fixDef.friction = nFix.getFriction();
-					fixDef.density = nFix.getDensity();
-					fixDef.restitution = nFix.getRestitution();
-					fixDef.shape = nFix.getShape();
-					
-					Fixture fix = body().createFixture(fixDef);
-					fix.setFilterData(nFix.getFilterData());
-				}
-			}
-			
-			//TODO: Update joints
-			
-			//Apply general physics state
-			BodyState bodyState = state.getBodyState();
-			
-			body().setTransform(bodyState.getTransform().getPosition(), bodyState.getTransform().getRotation());
-			body().setAngularDamping(bodyState.getAngularDamping());
-			body().setAngularVelocity(bodyState.getAngularVelocity());
-			body().setGravityScale(bodyState.getGravityScale());
-			body().setLinearDamping(bodyState.getLinearDamping());	
-			if(!body().getLinearVelocity().equals(bodyState.getLinearVelocity()))
-				body().setLinearVelocity(bodyState.getLinearVelocity());
-			body().setMassData(bodyState.getMassData());
-			//ent.body().setActive(bodyState.isActive());
-			//ent.body().setAwake(bodyState.isAwake());
-			body().setBullet(bodyState.isBullet());
-			body().setFixedRotation(bodyState.isFixedRotation());
-			body().setSleepingAllowed(bodyState.isSleepingAllowed());
-		}else{
-			snapToState = state;
+			setPlayer(player);
 		}
+		
+		//Update sprite
+		if(getSpriteResource() != null && !getSpriteResource().equals(state.getSpriteResource())){
+			setSprite(state.getSpriteResource());
+		}
+		
+		//Update fixtures
+		//TODO: I don't think this method of id'ing will work (need to set it in UserData probably)
+		//TODO: Will not destroy fixtures if they no longer exist... related to ^^
+		for(NetworkedFixture nFix : state.getBodyState().getFixtureList()){
+			try{
+				Fixture fix = body().getFixtureList().get(nFix.getId());
+				fix.setDensity(nFix.getDensity());
+				fix.setFilterData(nFix.getFilterData());
+				fix.setFriction(nFix.getFriction());
+				fix.setRestitution(nFix.getRestitution());
+			}catch(IndexOutOfBoundsException e){//Create it if it doesn't exist
+				FixtureDef fixDef = new FixtureDef();
+				fixDef.friction = nFix.getFriction();
+				fixDef.density = nFix.getDensity();
+				fixDef.restitution = nFix.getRestitution();
+				fixDef.shape = nFix.getShape();
+				
+				Fixture fix = body().createFixture(fixDef);
+				fix.setFilterData(nFix.getFilterData());
+			}
+		}
+		
+		//TODO: Update joints
+		
+		//Apply general physics state
+		BodyState bodyState = state.getBodyState();
+		
+		body().setTransform(bodyState.getTransform().getPosition(), bodyState.getTransform().getRotation());
+		body().setAngularDamping(bodyState.getAngularDamping());
+		body().setAngularVelocity(bodyState.getAngularVelocity());
+		body().setGravityScale(bodyState.getGravityScale());
+		body().setLinearDamping(bodyState.getLinearDamping());	
+		if(!body().getLinearVelocity().equals(bodyState.getLinearVelocity()))
+			body().setLinearVelocity(bodyState.getLinearVelocity());
+		body().setMassData(bodyState.getMassData());
+		//ent.body().setActive(bodyState.isActive());
+		//ent.body().setAwake(bodyState.isAwake());
+		body().setBullet(bodyState.isBullet());
+		body().setFixedRotation(bodyState.isFixedRotation());
+		body().setSleepingAllowed(bodyState.isSleepingAllowed());
 	}
 	
 	public void setId(int id){ this.id = id; }
 	public int getId(){ return id; }
 	public String getSpriteResource(){ return spriteResource; }
 	public void setSprite(String resource){
+		if(world != null && world.isSimulation()) return;
+		
 		if(resource != null){
 			sprite = new Sprite(new Texture(Gdx.files.internal(resource)));
 			sprite.setOriginCenter();
@@ -409,4 +412,5 @@ public class Entity {
 	public EntityState getSpawnState(){ return spawnState; }
 	
 	public boolean isSpawned(){ return body != null; }
+	public World getWorld(){ return world; }
 }

@@ -37,7 +37,7 @@ public class Snapshot {
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
 		instanceId = -1;
-		entityStates = new EntityState[0];
+		entityStates = null;
 	}
 
 	public Snapshot(int instanceId, PlayerState[] players, EntityState[] entityStates) {
@@ -78,6 +78,7 @@ public class Snapshot {
 	public EntityState getEntityState(int id) {
 		if(entityStates == null) return null;
 		for(int i = 0; i < entityStates.length; i++){
+			if(entityStates[i] == null) continue;
 			if(entityStates[i].getId() == id)
 				return entityStates[i];
 		}

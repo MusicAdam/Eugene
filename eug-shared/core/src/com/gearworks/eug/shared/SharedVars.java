@@ -20,7 +20,7 @@ public class SharedVars {
 	public static final boolean DEBUG_ENTITIES = false; //turns on aabb rendering
 	public static final boolean DEBUG_LOG = false;	//Enables log file writing
 	public static final Debug.Reporting DEBUG_LEVEL = Debug.Reporting.Verbose;
-	public static final int HISTORY_SIZE = 5;
+	public static final int HISTORY_SIZE = 1000;
 	
 	public static final float POSITION_TOLERANCE = .1f; //The distance the client can be out of sync before it forces correction
 	public static final float ROTATION_TOLERANCE = Utils.degToRad(5); //The angle the client can be out of sync before it forces correction

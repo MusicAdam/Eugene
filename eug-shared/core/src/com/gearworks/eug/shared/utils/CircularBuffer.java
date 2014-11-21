@@ -57,6 +57,14 @@ public class CircularBuffer<T> {
 		}		
 	}
 	
+	public T peekTail(){
+		synchronized(lock){
+			if(isEmpty()) return null;
+			if(tail - 1 == -1) return data[data.length - 1];
+ 			return data[tail - 1];
+		}
+	}
+	
 	public boolean isEmpty(){
 		synchronized(lock){
 			return head == tail && data[head] == null;
