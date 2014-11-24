@@ -134,22 +134,30 @@ public class GameState implements State {
 	@Override
 	public void render() {		
 		EugClient.GetWorld().render();
-		
+		/*
 		if(latestServerSnapshot != null){
 			Color old = EugClient.GetSpriteBatch().getColor();
-			EugClient.GetSpriteBatch().setColor(1, 0, 0, .8f);
+			EugClient.GetSpriteBatch().setColor(0, 1, 0, .8f);
 			latestServerSnapshot.render(EugClient.GetSpriteBatch());
 			EugClient.GetSpriteBatch().setColor(old);
 		}
-		/*
+		
+		if(latestRelatedSnapshot != null){
+			Color old = EugClient.GetSpriteBatch().getColor();
+			EugClient.GetSpriteBatch().setColor(0, 0, 1, .8f);
+			latestRelatedSnapshot.render(EugClient.GetSpriteBatch());
+			EugClient.GetSpriteBatch().setColor(old);			
+		}
+
+		
 		if(latestSimulatedServerSnapshot != null){
 			Color old = EugClient.GetSpriteBatch().getColor();
 			EugClient.GetSpriteBatch().setColor(0, 1, 0, .8f);
 			latestSimulatedServerSnapshot.render(EugClient.GetSpriteBatch());
 			EugClient.GetSpriteBatch().setColor(old);
-		}*/
+		}
 		
-		/*
+		
 		if(latestSimulatedSnapshot != null){
 			Color old = EugClient.GetSpriteBatch().getColor();
 			EugClient.GetSpriteBatch().setColor(0, 1, 0, .8f);
@@ -157,12 +165,6 @@ public class GameState implements State {
 			EugClient.GetSpriteBatch().setColor(old);
 		}
 		*/
-		if(latestRelatedSnapshot != null){
-			Color old = EugClient.GetSpriteBatch().getColor();
-			EugClient.GetSpriteBatch().setColor(0, 0, 1, .8f);
-			latestRelatedSnapshot.render(EugClient.GetSpriteBatch());
-			EugClient.GetSpriteBatch().setColor(old);			
-		}
 		
 	}
 
@@ -186,7 +188,7 @@ public class GameState implements State {
 			}		
 			Snapshot correctedState = null;
 			if((correctedState = simulator.getResult()) != null){
-				//Eug.GetWorld().snapToSnapshot(correctedState, "GameState:Update");
+				Eug.GetWorld().snapToSnapshot(correctedState);
 				latestSimulatedServerSnapshot = correctedState;
 			}
 			
@@ -234,7 +236,7 @@ public class GameState implements State {
 		}
 		
 		Snapshot snapshot = msg.getSnapshot();		
-		latestServerSnapshot = snapshot;
+		//latestServerSnapshot = snapshot;
 		
 		Eug.GetWorld().synchronizeSnapshot(snapshot);
 		
@@ -250,6 +252,7 @@ public class GameState implements State {
 
 		Snapshot serverSnapshot = msg.getSnapshot();
 		latestServerSnapshot = serverSnapshot;
+		//long clientTime = msg.getSnapshot().getTimestamp() - msg.getTravelTime() - 1000; //1000 is the custom delay we are using to simulate lag ss, normally this would be included in getTravelTime()
 		
 		latency = msg.getTravelTime();
 
@@ -265,22 +268,14 @@ public class GameState implements State {
 		}		
 		
 		if(simulator.isRunning()) return; //Don't update while previous correction is still calculating
-
-		Snapshot localSnapshot = Eug.GetWorld().pruneHistory(serverSnapshot.getTimestamp()); 
-		//Queue the server snapshot because we haven't completed a full frame since the last update
-		if(localSnapshot == null){
-			System.out.println("NULL");
-			serverUpdateQueue.add(serverSnapshot);
-			return;
-		}
 		
-		if(!serverUpdateQueue.isEmpty()){
-			Snapshot tmpSnap = serverUpdateQueue.poll();
-			serverUpdateQueue.add(serverSnapshot);
-			serverSnapshot = tmpSnap;
-		}
+		Snapshot localSnapshot = Eug.GetWorld().pruneHistory(msg.getSnapshot().getTimestamp()); 
+		
+		//Queue the server snapshot because we haven't completed a full frame since the last update
+		if(localSnapshot == null)
+			localSnapshot = Eug.GetWorld().getLatestSnapshot();
 
-		/*
+		
 		if(localSnapshot.getTimestamp() < serverSnapshot.getTimestamp()){ //If our local history is behind the server, simulate to where the server is.
 			simulator.simulate(localSnapshot, serverSnapshot.getTimestamp(), Eug.GetWorld().getHistory());
 			
@@ -288,7 +283,6 @@ public class GameState implements State {
 			while(simulator.isRunning()){} 			
 					
 			localSnapshot = simulator.getResult();
-			System.out.println("Local was behind our latest server snap, simulating that to the future, but not beyond.");
 		}else if(localSnapshot.getTimestamp() > serverSnapshot.getTimestamp()){ //If our local history is ahead of the server, simulate server to where we are
 			simulator.simulate(serverSnapshot, localSnapshot.getTimestamp(), Eug.GetWorld().getHistory());
 			
@@ -296,23 +290,10 @@ public class GameState implements State {
 			while(simulator.isRunning()){}
 			
 			serverSnapshot = simulator.getResult();
-			
-			System.out.println("Server was behind our closest local history, simulating that to the future, but not beyond.");
-		}*/
+		}
 
 		latestRelatedSnapshot = localSnapshot;
 		latestSimulatedServerSnapshot = serverSnapshot;
-		
-		
-		System.out.println("latestTime: " + Eug.GetWorld().getLatestSnapshot().getTimestamp() + "\nlocalSnapshotTimestamp: " + localSnapshot.getTimestamp() + "\nserverSnapshotTimestamp: " + serverSnapshot.getTimestamp());
-		/*if(localSnapshot.getTimestamp() != serverSnapshot.getTimestamp()){
-			try {
-				throw new Exception("SNAPSHOTS NOT SIM CORRECTERED");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}*/
 				
 		if(!Snapshot.Compare(serverSnapshot, localSnapshot)){	//If the serverSnapshot and the localSnapshot don't match, calculate a corrected state
 			simulator.simulate(serverSnapshot, Eug.GetWorld().getLatestSnapshot().getTimestamp(), Eug.GetWorld().getHistory());

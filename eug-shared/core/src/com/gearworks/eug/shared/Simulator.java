@@ -39,8 +39,8 @@ public class Simulator {
 				//Run simulation
 				running = true;
 
-				world.snapToSnapshot(snapshot, "simulator");
-				int count = 0;
+				world.snapToSnapshot(snapshot);
+				
 				while(simTime < toTime){
 					//If there isn't a full step left, calculate partial step
 					if(simTime + step > toTime)
@@ -62,13 +62,11 @@ public class Simulator {
 					world.update(SharedVars.STEP);
 					
 					simTime += step; //Step time forward
-					count++;
 				}
 				
 				snapshot = world.generateSnapshot();
 				snapshot.setTimestamp(simTime);		
 				
-				System.out.println("Simulated " + count + " predicted " + predicted);
 				running = false;
 			}
 		}

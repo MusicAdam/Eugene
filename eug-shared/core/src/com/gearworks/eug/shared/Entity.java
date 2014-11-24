@@ -137,7 +137,7 @@ public class Entity {
 		
 		if(snapToState != null){
 			try {
-				snapToState(snapToState, "[" + world.getName() + "] Entity.update");
+				snapToState(snapToState);
 			} catch (EntityUpdateException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -172,7 +172,7 @@ public class Entity {
 	public void spawn(World world){
 		if(spawnState != null){
 			try {
-				snapToState(spawnState, "[" + world.getName() + "] Entity.spawn");
+				snapToState(spawnState);
 			} catch (EntityUpdateException e) {
 				e.printStackTrace();
 			}
@@ -331,9 +331,8 @@ public class Entity {
 		throw new NotImplementedException(); //Does this even require implementation? See: setSprite
 	}
 	
-	public void snapToState(EntityState state, String from) throws EntityUpdateException{
+	public void snapToState(EntityState state) throws EntityUpdateException{
 		//Update entity's owner
-		System.out.println("Snapping to state in world: " + world.getName() + " from: " + from);
 		if(getPlayer().getId() != state.getPlayerId()){
 			Player player = world.getPlayer(state.getPlayerId());
 			

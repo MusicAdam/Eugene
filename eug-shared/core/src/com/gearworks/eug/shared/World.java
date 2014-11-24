@@ -99,24 +99,23 @@ public class World {
 		
 		box2dWorld.step(step, SharedVars.VELOCITY_ITERATIONS, SharedVars.POSITION_ITERATIONS);
 		
-		if(!simulator){
+		if(!simulator){			
+			for(Player player : Eug.GetPlayers()){
+				for(ClientInput input : player.getInputs()){
+					latestSnapshot.pushInput(input);
+				}
+				
+				player.clearInputs();
+				
+				for(Entity ent : player.getEntities()){
+					if(ent.isSpawned())
+						ent.update();
+				}
+			}
+			
 			synchronized(historyLock){
 				history.push(generateSnapshot());
 				latestSnapshot = history.peekTail();
-				
-				for(Player player : Eug.GetPlayers()){
-					for(ClientInput input : player.getInputs()){
-						latestSnapshot.pushInput(input);
-					}
-					
-					player.clearInputs();
-					
-					for(Entity ent : player.getEntities()){
-						if(ent.isSpawned())
-							ent.update();
-					}
-				}
-				
 			}
 		}
 	}
@@ -139,14 +138,13 @@ public class World {
 		}
 	}
 	
-	public void snapToSnapshot(Snapshot snapshot, String from){
-		System.out.println(name + ": snap to snapshot from " + from);
+	public void snapToSnapshot(Snapshot snapshot){
 		synchronizeSnapshot(snapshot);
 		
 		for(EntityState state : snapshot.getEntityStates()){
 			Entity ent = getEntity(state.getId());
 			try {
-				ent.snapToState(state, "[" + getName() + "] World.snapToSnapshot");
+				ent.snapToState(state);
 			} catch (EntityUpdateException e) {
 				e.printStackTrace();
 			}
@@ -265,18 +263,20 @@ public class World {
 	}
 	
 	public Snapshot findPastSnapshot(long time, long epsilon){
-		if(history.isEmpty()) return null;
-		
-		int inc = 0;
-		
-		while(inc < history.count()){
-			if(history.peek(inc).getTimestamp() + epsilon > time && history.peek(inc).getTimestamp() - epsilon < time){
-				return history.peek(inc);
+		synchronized(historyLock){
+			if(history.isEmpty()) return null;
+			
+			int inc = 0;
+			
+			while(inc < history.count()){
+				if(history.peek(inc).getTimestamp() + epsilon > time && history.peek(inc).getTimestamp() - epsilon < time){
+					return history.peek(inc);
+				}
+				inc++;
 			}
-			inc++;
+			
+			return null;
 		}
-		
-		return null;
 	}
 	
 	public Snapshot findPastSnapshot(long time){
@@ -374,12 +374,12 @@ public class World {
 			playerStates[i] = pl.getState();
 			i++;
 		}
-		Snapshot s = new Snapshot(instanceId, playerStates, getEntityStates());
-		return s;
+		
+		return new Snapshot(instanceId, playerStates, getEntityStates());
 	}
 	
 	public EntityState[] getEntityStates() {
-		EntityState[] states = new EntityState[Eug.GetEntities().entrySet().size()];
+		EntityState[] states = new EntityState[entityMap.entrySet().size()];
 		Iterator entIt = entityMap.entrySet().iterator();
 		int i = 0;
 		while(entIt.hasNext())
@@ -459,14 +459,11 @@ public class World {
 	public String getName(){ return name; }
 
 	public Snapshot pruneHistory(long timestamp) {
-		int count = history.count();
-		System.out.println("Before: " + count);
-		System.out.println("isEmpty: " + history.isEmpty());
+		Snapshot last = null; 
 		while(!history.isEmpty() && history.peek().getTimestamp() < timestamp){
-			history.pop();
+			last = history.pop();
 		}
 
-		System.out.println("After: " + count);
-		return history.peek();
+		return (history.peek() == null) ? last : history.peek();
 	}
 }

@@ -67,7 +67,11 @@ public class BodyState {
 	public static void FromEntity(Entity ent, BodyState toState){
 		Body body = ent.body();
 		toState.id = ent.getId();
-		toState.transform = body.getTransform();
+		toState.transform = new Transform();
+		toState.transform.vals[0] = body.getTransform().vals[0];
+		toState.transform.vals[1] = body.getTransform().vals[1];
+		toState.transform.vals[2] = body.getTransform().vals[2];
+		toState.transform.vals[3] = body.getTransform().vals[3];
 		toState.angularDamping = body.getAngularDamping();
 		toState.angularVelocity = body.getAngularVelocity();
 		toState.gravityScale = body.getGravityScale();
@@ -75,7 +79,11 @@ public class BodyState {
 		toState.linearDamping = body.getLinearDamping();
 		toState.linearVelocityX = body.getLinearVelocity().x;
 		toState.linearVelocityY = body.getLinearVelocity().y;
-		toState.massData = body.getMassData();
+		toState.massData = new MassData();
+		toState.massData.mass = body.getMassData().mass;
+		toState.massData.center.x = body.getMassData().center.x;
+		toState.massData.center.y = body.getMassData().center.y;
+		toState.massData.I = body.getMassData().I;
 		toState.isActive = body.isActive();
 		toState.isAwake = body.isAwake();
 		toState.isBullet = body.isBullet();

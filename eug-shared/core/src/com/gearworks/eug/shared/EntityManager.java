@@ -21,7 +21,7 @@ import com.gearworks.eug.shared.utils.CircularBuffer;
 public class EntityManager {	
 	public static void SnapToTestState(Entity ent){
 		try {
-			ent.snapToState(EntityState.GenerateTestState(ent), "[" + ent.getWorld().getName() + "] EntityManager:SnapToTestState" );
+			ent.snapToState(EntityState.GenerateTestState(ent) );
 		} catch (EntityUpdateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -69,7 +69,7 @@ public class EntityManager {
 	}
 		
 	public static Entity SnapToState(EntityState state, Entity ent) throws EntityUpdateException{		
-		ent.snapToState(state, "[" + ent.getWorld().getName() + "] EntityManager:SnapToState");		
+		ent.snapToState(state);		
 		return ent;
 	}
 	

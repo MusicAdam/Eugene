@@ -1,6 +1,7 @@
 package com.gearworks.eug.server;
 
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.badlogic.gdx.Gdx;
@@ -164,7 +165,9 @@ public class Instance {
 								@Override
 								public void run(){
 									try {
-										Thread.sleep(1000);
+										Random rand = new Random();
+										int time = rand.nextInt(1080) + 20;
+										Thread.sleep(time);
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();
