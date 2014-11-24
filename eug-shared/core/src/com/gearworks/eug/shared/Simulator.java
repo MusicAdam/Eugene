@@ -48,9 +48,10 @@ public class Simulator {
 					
 					synchronized(world.historyLock){
 						int inc = 0;
-						while(!history.isEmpty() && history.peek(inc).getTimestamp() < simTime){
+						while(!history.isEmpty() && history.peek(inc).getTimestamp() <= simTime){
 							Snapshot snap = history.peek(inc);
 							int snapInc = 0;
+							System.out.println("Snapshot has inputs " + snap.getClientInput().count());
 							while(!snap.getClientInput().isEmpty() && snap.getClientInput().count() > snapInc){
 								snap.getClientInput().peek(snapInc).resolve(world);
 								snapInc++;

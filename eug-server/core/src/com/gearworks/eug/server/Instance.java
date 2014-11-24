@@ -17,6 +17,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.Simulator;
 import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
@@ -44,6 +45,7 @@ public class Instance {
 	private Box2DDebugRenderer b2ddbgRenderer; 
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
 	private Snapshot lastSnapshotSent;
+	private Simulator simulator;
 
 	public Instance(int id)
 	{
@@ -58,6 +60,7 @@ public class Instance {
 		world.addPlayer(serverPlayer);
 		lastSnapshotSent = world.generateSnapshot();
 		tick = 0;
+		simulator = new Simulator();
 		
 		//Setup message handlers
 		/*
@@ -101,28 +104,32 @@ public class Instance {
 		EugServer.Spawn(new LevelBoundsEntity(world.countEntities(), serverPlayer));
 	}
 	
-	protected void clientInputReceived(Connection c, ClientInput msg) {		
+	protected void clientInputReceived(Connection c, ClientInput input) {		
 		//ignore if input is from the future
-		if(msg.getTick() > tick)
+		if(input.getTimestamp() > Utils.generateTimeStamp())
 			return;
 		
 		ServerPlayer pl = (ServerPlayer)findPlayerByConnection(c);
 		
 		if(pl == null) return;
+		System.out.println("Before: " + world.getHistory().count());
+		Snapshot snapshot = world.pruneHistory(input.getTimestamp());
+		System.out.println("After" + world.getHistory().count());
 		
-		EugServer.OpenInstanceRequest(id);
-		msg.resolve(Eug.GetWorld());
-		EugServer.CloseInstanceRequest();
+		if(snapshot == null) return; //If there is no history of the user's input, disregard it.
+		
+		snapshot.getClientInput().push(input); //Add the input to the snapshot in which the input happened client side
+		
+		simulator.simulate(snapshot, Utils.generateTimeStamp(), world.getHistory()); //Simulate a new world based on the client input
+		
+		while(simulator.isRunning()){} //Wait for simulation
+		
+		world.snapToSnapshot(simulator.getResult()); //Apply correction
 	}
 
 	public void update(){
 		tick++;
 		world.update(SharedVars.STEP);
-		
-		//Update entities
-		for(Entity e : world.getEntities()){
-			e.update();
-		}
 		
 		boolean snapshotSent = false;
 		
@@ -166,8 +173,8 @@ public class Instance {
 								public void run(){
 									try {
 										Random rand = new Random();
-										int time = rand.nextInt(1080) + 20;
-										Thread.sleep(time);
+										int time = rand.nextInt(980) + 20;
+										Thread.sleep(90);
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();

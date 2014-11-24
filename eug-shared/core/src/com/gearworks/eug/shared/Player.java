@@ -134,6 +134,7 @@ public class Player {
 	public void clearInputs(){ inputs.clear(); }
 	
 	public void processInput(ClientInput input) {	
+		System.out.println("Process input!");
 		inputs.add(input);
 		
 		if(getDisk() == null) return;
