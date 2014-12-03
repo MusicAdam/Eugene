@@ -12,7 +12,7 @@ import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
-import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.Snapshot;

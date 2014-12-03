@@ -10,7 +10,7 @@ import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.PlayerState;
 import com.gearworks.eug.shared.SharedVars;
-import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.utils.CircularBuffer;
 import com.gearworks.eug.shared.utils.Utils;
 
@@ -21,9 +21,8 @@ public class Snapshot {
 	private int instanceId; //Server instance to which this snapshot is referring
 	private long timestamp;
 	private EntityState[] entityStates; //The states for all the entities in the server
-	private PlayerState[] players; //Players who are connected
-	
-	private transient CircularBuffer<ClientInput> inputs; //Record of inputs since last snapshot
+	private PlayerState[] players; //Players who are connected	
+	private ArrayList<PlayerInput> inputs; //Record of inputs since last snapshot
 	
 	public static Snapshot GenerateTestSnapshot(Entity ent){
 		Snapshot s = new Snapshot();
@@ -45,7 +44,7 @@ public class Snapshot {
 		this.instanceId = instanceId;
 		this.entityStates = entityStates;
 		this.players = players;
-		this.inputs = new CircularBuffer<ClientInput>(SharedVars.HISTORY_SIZE);
+		this.inputs = new ArrayList<PlayerInput>();
 	}
 	
 	public Snapshot(Snapshot cpy){
@@ -63,6 +62,13 @@ public class Snapshot {
 			this.players = new PlayerState[cpy.players.length];
 			for(int i = 0; i < cpy.players.length; i++){
 				this.players[i] = new PlayerState(cpy.players[i]);
+			}
+		}
+		
+		if(cpy.inputs != null){
+			this.inputs = new ArrayList<PlayerInput>();
+			for(PlayerInput input : cpy.inputs){
+				this.inputs.add(new PlayerInput(input));
 			}
 		}
 	}
@@ -118,11 +124,11 @@ public class Snapshot {
 		return players;
 	}
 	
-	public CircularBuffer<ClientInput> getClientInput(){
+	public ArrayList<PlayerInput> getClientInput(){
 		return inputs;
 	}
 	
-	public void pushInput(ClientInput input){
-		inputs.push(input);
+	public void addInput(PlayerInput input){
+		inputs.add(input);
 	}
 }

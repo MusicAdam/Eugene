@@ -1,5 +1,6 @@
 package com.gearworks.eug.server;
 
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -21,8 +22,8 @@ import com.gearworks.eug.shared.Simulator;
 import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.entities.LevelBoundsEntity;
-import com.gearworks.eug.shared.input.ClientInput;
-import com.gearworks.eug.shared.input.ClientInput.Event;
+import com.gearworks.eug.shared.input.PlayerInput;
+import com.gearworks.eug.shared.input.PlayerInput.Event;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
@@ -91,11 +92,10 @@ public class Instance {
 					pl.setInitialized(true);				
 			}
 		});
-		EugServer.GetMessageRegistry().register(ClientInput.class, new MessageCallback(){
+		EugServer.GetMessageRegistry().register(PlayerInput.class, new MessageCallback(){
 			@Override
 			public void messageReceived(Connection c, Message msg){
-				System.out.println("Received input");
-				thisInst.clientInputReceived(c, (ClientInput) msg);			
+				thisInst.clientInputReceived(c, (PlayerInput) msg);			
 			}
 		});
 	}
@@ -104,7 +104,7 @@ public class Instance {
 		EugServer.Spawn(new LevelBoundsEntity(world.countEntities(), serverPlayer));
 	}
 	
-	protected void clientInputReceived(Connection c, ClientInput input) {		
+	protected void clientInputReceived(Connection c, PlayerInput input) {		
 		//ignore if input is from the future
 		if(input.getTimestamp() > Utils.generateTimeStamp())
 			return;
@@ -112,19 +112,25 @@ public class Instance {
 		ServerPlayer pl = (ServerPlayer)findPlayerByConnection(c);
 		
 		if(pl == null) return;
-		System.out.println("Before: " + world.getHistory().count());
-		Snapshot snapshot = world.pruneHistory(input.getTimestamp());
-		System.out.println("After" + world.getHistory().count());
 		
-		if(snapshot == null) return; //If there is no history of the user's input, disregard it.
+		world.pruneHistory(input.getTimestamp());
 		
-		snapshot.getClientInput().push(input); //Add the input to the snapshot in which the input happened client side
+		Snapshot snapshot = world.getHistory().peek();
+		pl.addInput(input);
 		
-		simulator.simulate(snapshot, Utils.generateTimeStamp(), world.getHistory()); //Simulate a new world based on the client input
-		
-		while(simulator.isRunning()){} //Wait for simulation
-		
-		world.snapToSnapshot(simulator.getResult()); //Apply correction
+		if(snapshot != null){
+			snapshot.getClientInput().add(input); //Add the input to the snapshot in which the input happened client side
+			input.setSaved(true);
+			input.setCorrected(true);
+			simulator.simulate(snapshot, Utils.generateTimeStamp(), world.getHistory()); //Simulate a new world based on the client input
+			
+			while(simulator.isRunning()){} //Wait for simulation
+			
+			world.snapToSnapshot(simulator.getResult()); //Apply correction
+		}else{
+			PlayerInput.Resolve(world, input);	
+			input.setCorrected(true);
+		}
 	}
 
 	public void update(){
@@ -166,6 +172,17 @@ public class Instance {
 						if((Utils.generateTimeStamp() - pl.getLastSnapshotTimestamp()) >= SNAPSHOT_DELAY && world.getLatestSnapshot().getTimestamp() > pl.getValidationTimestamp()){ //(90 + Math.random() * 110) <- random latency in average latency range
 								
 							final UpdateMessage msg = new UpdateMessage(world.getLatestSnapshot());
+							
+							Iterator<PlayerInput> iterator = pl.getInputs().iterator();
+							
+							while(iterator.hasNext()){
+								PlayerInput input = iterator.next();
+								if(input.isCorrected()){
+									msg.getSnapshot().addInput(input);
+									iterator.remove();
+								}
+							}
+							
 							pl.setLastSnapshotTimestamp(world.getLatestSnapshot().getTimestamp());
 							final Player spl = pl;
 							new Thread(){

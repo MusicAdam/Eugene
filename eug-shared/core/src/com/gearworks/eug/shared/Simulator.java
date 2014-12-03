@@ -3,6 +3,7 @@ package com.gearworks.eug.shared;
 import java.util.List;
 
 import com.badlogic.gdx.utils.Array;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
 
@@ -18,6 +19,7 @@ public class Simulator {
 		CircularBuffer<Snapshot> history;
 		long toTime;
 		boolean running = false;
+		private volatile boolean doSim = true;
 		
 		public SimulationThread(World world, Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
 			this.snapshot = snapshot;
@@ -41,7 +43,7 @@ public class Simulator {
 
 				world.snapToSnapshot(snapshot);
 				
-				while(simTime < toTime){
+				while(simTime < toTime && doSim){
 					//If there isn't a full step left, calculate partial step
 					if(simTime + step > toTime)
 						step = toTime - simTime;
@@ -50,11 +52,8 @@ public class Simulator {
 						int inc = 0;
 						while(!history.isEmpty() && history.peek(inc).getTimestamp() <= simTime){
 							Snapshot snap = history.peek(inc);
-							int snapInc = 0;
-							System.out.println("Snapshot has inputs " + snap.getClientInput().count());
-							while(!snap.getClientInput().isEmpty() && snap.getClientInput().count() > snapInc){
-								snap.getClientInput().peek(snapInc).resolve(world);
-								snapInc++;
+							for(PlayerInput input : snap.getClientInput()){
+								PlayerInput.Resolve(world, input);
 							}
 							inc++;
 						}
@@ -70,6 +69,10 @@ public class Simulator {
 				
 				running = false;
 			}
+		}
+		
+		public void terminate(){
+			doSim = false;
 		}
 		
 		public Snapshot getResult(){
@@ -99,6 +102,13 @@ public class Simulator {
 		if(thread == null) return false;
 		
 		return thread.isAlive();
+	}
+	
+	public void terminateSimulation(){
+		if(thread == null) return;
+		if(!thread.isAlive()) return;
+		
+		thread.terminate();
 	}
 	
 	public Snapshot getResult(){		

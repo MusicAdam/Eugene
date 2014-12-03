@@ -14,10 +14,8 @@ import com.gearworks.eug.client.state.GameState;
 import com.gearworks.eug.shared.Entity;
 import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
-import com.gearworks.eug.shared.input.ClientInput;
-import com.gearworks.eug.shared.input.ClientInput.Event;
-import com.gearworks.eug.shared.input.ImpulseInput;
-import com.gearworks.eug.shared.input.TurnInput;
+import com.gearworks.eug.shared.input.PlayerInput;
+import com.gearworks.eug.shared.input.PlayerInput.Event;
 
 public class UserInterface implements InputProcessor{	
 	public boolean debug_showContacts = true;
@@ -27,6 +25,7 @@ public class UserInterface implements InputProcessor{
 	private Vector2 dragStart;
 	private Vector2 dragPos;
 	private InputMapper inputMap;
+	private int inputId = 0;
 	
 	float selectionPadding = 0f;
 
@@ -50,9 +49,8 @@ public class UserInterface implements InputProcessor{
 				Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
 				//EugClient.GetPlayer().getDisk().applyImpulse(dir);
 				
-				GameState state = (GameState)Eug.GetStateManager().state();
-				ClientInput input = new ImpulseInput(EugClient.GetPlayer().getId(), Event.Key, dir, Input.Keys.SPACE);
-				input.resolve(Eug.GetWorld());
+				PlayerInput input = new PlayerInput(inputId, EugClient.GetPlayer().getId(), Event.Key, dir, Input.Keys.SPACE);
+				PlayerInput.Resolve(Eug.GetWorld(), input);
 				EugClient.GetPlayer().getConnection().sendUDP(input);
 			}
 		}else if(keycode == Input.Keys.D){
@@ -84,8 +82,9 @@ public class UserInterface implements InputProcessor{
 				Vector2 dir = mousePos.sub(EugClient.GetPlayer().getDisk().position()).nor();
 	
 				GameState state = (GameState)Eug.GetStateManager().state();
-				ClientInput input = new TurnInput(EugClient.GetPlayer().getId(), Event.LeftMouseButton, dir, -1);
-				input.resolve(Eug.GetWorld());
+				PlayerInput input = new PlayerInput(inputId, EugClient.GetPlayer().getId(), Event.LeftMouseButton, dir, -1);
+				inputId++;
+				PlayerInput.Resolve(Eug.GetWorld(), input);
 				EugClient.GetPlayer().getConnection().sendUDP(input);
 			}
 		}else if(button == 1){

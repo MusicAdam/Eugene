@@ -13,7 +13,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
-import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
@@ -101,11 +101,13 @@ public class World {
 		
 		if(!simulator){			
 			for(Player player : Eug.GetPlayers()){
-				for(ClientInput input : player.getInputs()){
-					latestSnapshot.pushInput(input);
+				for(PlayerInput input : player.getInputs()){
+					if(!input.isSaved()){
+						latestSnapshot.addInput(input);
+						input.setSaved(true);
+					}
 				}
 				
-				player.clearInputs();
 				
 				for(Entity ent : player.getEntities()){
 					if(ent.isSpawned())

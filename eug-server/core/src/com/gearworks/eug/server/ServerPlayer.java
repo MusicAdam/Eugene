@@ -3,7 +3,7 @@ package com.gearworks.eug.server;
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.entities.DiskEntity;
-import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 
 public class ServerPlayer extends Player {
 	

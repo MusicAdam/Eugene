@@ -24,7 +24,7 @@ import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.entities.DiskEntity;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
-import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
@@ -175,19 +175,14 @@ public class GameState implements State {
 		
 		Eug.GetWorld().update(SharedVars.STEP);
 
-		if(EugClient.GetPlayer().isValid()){ //Update entities
-			//Add inputs if there are any
-			for(ClientInput input : EugClient.GetPlayer().getInputs()){
-				latestSnapshot.pushInput(input);
-			}
-			EugClient.GetPlayer().clearInputs();
-			
+		if(EugClient.GetPlayer().isValid()){ //Update entities			
 			//Initialize simulator if it hasn't been already
 			if(simulator == null){
 				simulator = new Simulator();
 			}		
 			Snapshot correctedState = null;
-			if((correctedState = simulator.getResult()) != null){
+			if((correctedState = simulator.getResult()) != null &&
+				EugClient.GetPlayer().getInputs().size() == 0){
 				Eug.GetWorld().snapToSnapshot(correctedState);
 				latestSimulatedServerSnapshot = correctedState;
 			}
@@ -249,8 +244,35 @@ public class GameState implements State {
 	
 	protected void serverUpdate(UpdateMessage msg) {
 		if(!EugClient.GetPlayer().isValid()) return;
-
+				
 		Snapshot serverSnapshot = msg.getSnapshot();
+		
+		if(EugClient.GetPlayer().getInputs().size() > 0){
+			boolean shouldCorrect = false;
+			for(PlayerInput serverInput : serverSnapshot.getClientInput()){
+				Iterator<PlayerInput> iterator = EugClient.GetPlayer().getInputs().iterator();
+				
+				while(iterator.hasNext()){
+					PlayerInput clientInput = iterator.next();
+					
+					if(serverInput.getTimestamp() == clientInput.getTimestamp() &&
+					   serverInput.getTargetPlayerID() == clientInput.getTargetPlayerID()){
+						clientInput.setCorrected(true);
+						iterator.remove();
+						
+						shouldCorrect = true;
+						System.out.println("Correcting input");
+					}
+				}
+			}
+			
+			if(!shouldCorrect){
+				System.out.println("NOPE GET OOT");
+				return; //Still waiting for corrected snapshot, dont want to interrupt our prediction with invalid server states.	
+						//TODO: There should be a timeout for this incase the packet containg the user input was lost.
+			}
+		}		
+		
 		latestServerSnapshot = serverSnapshot;
 		//long clientTime = msg.getSnapshot().getTimestamp() - msg.getTravelTime() - 1000; //1000 is the custom delay we are using to simulate lag ss, normally this would be included in getTravelTime()
 		
@@ -267,9 +289,10 @@ public class GameState implements State {
 			}
 		}		
 		
-		if(simulator.isRunning()) return; //Don't update while previous correction is still calculating
+		if(simulator.isRunning()) simulator.terminateSimulation(); //Don't care about the old update, we have new data
 		
-		Snapshot localSnapshot = Eug.GetWorld().pruneHistory(msg.getSnapshot().getTimestamp()); 
+	
+		Snapshot localSnapshot = Eug.GetWorld().pruneHistory(msg.getSnapshot().getTimestamp()); 	
 		
 		//Queue the server snapshot because we haven't completed a full frame since the last update
 		if(localSnapshot == null)

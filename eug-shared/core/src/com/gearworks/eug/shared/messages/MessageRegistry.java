@@ -1,5 +1,7 @@
 package com.gearworks.eug.shared.messages;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.EdgeShape;
@@ -15,9 +17,7 @@ import com.gearworks.eug.shared.NetworkedFixture;
 import com.gearworks.eug.shared.NetworkedJoint;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.PlayerState;
-import com.gearworks.eug.shared.input.ClientInput;
-import com.gearworks.eug.shared.input.ImpulseInput;
-import com.gearworks.eug.shared.input.TurnInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.BodyState;
 import com.gearworks.eug.shared.state.EntityState;
 import com.gearworks.eug.shared.state.Snapshot;
@@ -55,13 +55,12 @@ public class MessageRegistry {
 		kryo.register(Transform.class);
 		kryo.register(Entity.Type.class);
 		kryo.register(InitializeSceneMessage.class);
-		kryo.register(ClientInput.class);
-		kryo.register(ClientInput.Event.class);
-		kryo.register(ImpulseInput.class);
-		kryo.register(TurnInput.class);
+		kryo.register(PlayerInput.class);
+		kryo.register(PlayerInput.Event.class);
 		kryo.register(int[].class);
 		kryo.register(PlayerState.class);
 		kryo.register(PlayerState[].class);
+		kryo.register(ArrayList.class);
 		
 	}
 	

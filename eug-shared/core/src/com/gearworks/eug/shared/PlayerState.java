@@ -3,7 +3,7 @@ package com.gearworks.eug.shared;
 import java.util.ArrayList;
 
 import com.gearworks.eug.shared.entities.DiskEntity;
-import com.gearworks.eug.shared.input.ClientInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 
 
 //Encapsulates the state of a player so that it may be sent over the network

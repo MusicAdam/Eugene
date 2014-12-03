@@ -2,20 +2,13 @@ package com.gearworks.eug.shared;
 
 import java.util.ArrayList;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.utils.Array;
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.entities.DiskEntity;
-import com.gearworks.eug.shared.input.ClientInput;
-import com.gearworks.eug.shared.input.ImpulseInput;
-import com.gearworks.eug.shared.input.TurnInput;
+import com.gearworks.eug.shared.input.PlayerInput;
 
-/*
- * TODO: Make player class serializable so that it can be sent in messages
- * 			*No longer have a reference to connection
- * 			*No longer have a diskentity
- * 			*These could both be changes to their respective id's. Tradeoff being you now have to query for connection & entity
- * 				as opposed to just the player. On the ohter hand you no longer have to reconstruct the player on clientside..
- */
 public class Player {		
 	private int 	instanceId;			//Reference to instance this player belongs to 
 	private int 	id; 			//id associated with player's connection to the server
@@ -25,13 +18,13 @@ public class Player {
 	private boolean isDisconnected = false; //When true player will be removed from idle players/instances
 	private transient ArrayList<Entity> entities;
 	private transient DiskEntity myDisk; 
-	private transient ArrayList<ClientInput> inputs; //A record of inputs since the last snapshot
+	private transient ArrayList<PlayerInput> inputs; //A record of inputs. On client: inputs will be removed once they have been corrected.
 	
 	public Player(int id){
 		instanceId = -1;
 		this.id = id;
 		entities = new ArrayList<Entity>();
-		inputs = new ArrayList<ClientInput>();
+		inputs = new ArrayList<PlayerInput>();
 	}
 	
 	public Player(PlayerState state){
@@ -41,7 +34,7 @@ public class Player {
 		this.isInitialized = state.isInitialized();
 		this.isDisconnected = state.isDisconnected();
 		entities = new ArrayList<Entity>();
-		inputs = new ArrayList<ClientInput>();
+		inputs = new ArrayList<PlayerInput>();
 	}
 	
 	
@@ -130,19 +123,18 @@ public class Player {
 		return myDisk;
 	}
 	
-	public ArrayList<ClientInput> getInputs(){ return inputs; }
+	public ArrayList<PlayerInput> getInputs(){ return inputs; }
 	public void clearInputs(){ inputs.clear(); }
 	
-	public void processInput(ClientInput input) {	
-		System.out.println("Process input!");
+	public void resolveLeftMouseButton(PlayerInput input){
 		inputs.add(input);
-		
-		if(getDisk() == null) return;
-		
-		if(input instanceof ImpulseInput){
-			getDisk().applyImpulse(input.getInfoVector());			
-		}else if(input instanceof TurnInput){
-			getDisk().turnTo(input.getInfoVector());
+		getDisk().turnTo(input.getInfoVector());		
+	}
+	
+	public void resolveKeyPress(PlayerInput input){
+		inputs.add(input);
+		if(input.getKey() == Input.Keys.SPACE){
+			getDisk().applyImpulse(input.getInfoVector());					
 		}
 	}
 
@@ -193,4 +185,8 @@ public class Player {
 	
 	public void setLastSnapshotTimestamp(long ts){ lastSnapshotTimestamp = ts; }
 	public long getLastSnapshotTimestamp(){ return lastSnapshotTimestamp; }
+	
+	public void addInput(PlayerInput input) {
+		inputs.add(input);
+	}
 }
