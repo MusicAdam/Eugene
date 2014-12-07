@@ -61,6 +61,7 @@ public class MessageRegistry {
 		kryo.register(PlayerState.class);
 		kryo.register(PlayerState[].class);
 		kryo.register(ArrayList.class);
+		kryo.register(PlayerInput[].class);
 		
 	}
 	

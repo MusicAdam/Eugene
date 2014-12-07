@@ -104,7 +104,6 @@ public class World {
 				for(PlayerInput input : player.getInputs()){
 					if(!input.isSaved()){
 						latestSnapshot.addInput(input);
-						input.setSaved(true);
 					}
 				}
 				
@@ -166,8 +165,6 @@ public class World {
 		HashSet<Integer> localEntitySet = new HashSet<Integer>();
 		
 		if(isSynchronized(snapshot, serverPlayerSet, localPlayerSet, serverEntitySet, localEntitySet)) return;
-		
-		System.out.println("NOT SYNCED");
 		
 		//Get the serverPLayers - localPlayers to find which players have connected
 		HashSet<Integer> newPlayers = new HashSet<Integer>(serverPlayerSet);
@@ -370,14 +367,26 @@ public class World {
 	}
 	
 	public Snapshot generateSnapshot() {
-		PlayerState[] playerStates = new PlayerState[players.size()];
+		PlayerState[] playerStates = new PlayerState[players.size()];		
+		ArrayList<PlayerInput> inputsList = new ArrayList<PlayerInput>();
+		
 		int i = 0;
 		for(Player pl : players){
 			playerStates[i] = pl.getState();
 			i++;
+			
+			for(PlayerInput input : pl.getInputs()){
+				if(!input.isSaved()){
+					input.setSaved(true);
+					inputsList.add(input);
+				}
+			}
 		}
 		
-		return new Snapshot(instanceId, playerStates, getEntityStates());
+		PlayerInput[] inputsArray = new PlayerInput[inputsList.size()];
+		inputsList.toArray(inputsArray);
+		
+		return new Snapshot(instanceId, playerStates, getEntityStates(), inputsArray);
 	}
 	
 	public EntityState[] getEntityStates() {

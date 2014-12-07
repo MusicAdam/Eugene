@@ -22,7 +22,7 @@ public class Snapshot {
 	private long timestamp;
 	private EntityState[] entityStates; //The states for all the entities in the server
 	private PlayerState[] players; //Players who are connected	
-	private ArrayList<PlayerInput> inputs; //Record of inputs since last snapshot
+	private PlayerInput[] inputs; //Record of inputs since last snapshot
 	
 	public static Snapshot GenerateTestSnapshot(Entity ent){
 		Snapshot s = new Snapshot();
@@ -39,12 +39,12 @@ public class Snapshot {
 		entityStates = null;
 	}
 
-	public Snapshot(int instanceId, PlayerState[] players, EntityState[] entityStates) {
+	public Snapshot(int instanceId, PlayerState[] players, EntityState[] entityStates, PlayerInput[] playerInputs) {
 		timestamp = Utils.generateTimeStamp();
 		this.instanceId = instanceId;
 		this.entityStates = entityStates;
 		this.players = players;
-		this.inputs = new ArrayList<PlayerInput>();
+		this.inputs = playerInputs;
 	}
 	
 	public Snapshot(Snapshot cpy){
@@ -66,9 +66,9 @@ public class Snapshot {
 		}
 		
 		if(cpy.inputs != null){
-			this.inputs = new ArrayList<PlayerInput>();
-			for(PlayerInput input : cpy.inputs){
-				this.inputs.add(new PlayerInput(input));
+			this.inputs = new PlayerInput[cpy.inputs.length];
+			for(int i = 0; i < inputs.length; i++){
+				this.inputs[i] = new PlayerInput(cpy.inputs[i]);
 			}
 		}
 	}
@@ -124,11 +124,28 @@ public class Snapshot {
 		return players;
 	}
 	
-	public ArrayList<PlayerInput> getClientInput(){
+	public PlayerInput[] getInput(){
 		return inputs;
 	}
 	
 	public void addInput(PlayerInput input){
-		inputs.add(input);
+		if(input.isSaved()){
+			//return; //If this input is already in another snapshot, don't add it to this one.
+		}
+		
+		//Create a new input array with  the snapshots current inputs + 1 for the new input
+		int fixedSize = getInput().length + 1;
+		PlayerInput[] inputs = new PlayerInput[fixedSize];
+		
+		//Copy over old inputs
+		for(int i = 0; i < getInput().length; i++){
+			inputs[i] = getInput()[i];
+		}
+		
+		inputs[fixedSize - 1] = input;
+		
+		input.setSaved(true);
+		
+		this.inputs = inputs;
 	}
 }

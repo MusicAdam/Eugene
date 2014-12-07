@@ -52,7 +52,7 @@ public class Simulator {
 						int inc = 0;
 						while(!history.isEmpty() && history.peek(inc).getTimestamp() <= simTime){
 							Snapshot snap = history.peek(inc);
-							for(PlayerInput input : snap.getClientInput()){
+							for(PlayerInput input : snap.getInput()){
 								PlayerInput.Resolve(world, input);
 							}
 							inc++;

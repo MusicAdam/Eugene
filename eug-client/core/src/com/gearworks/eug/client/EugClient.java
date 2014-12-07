@@ -169,7 +169,6 @@ public class EugClient extends Eug {
 			float xPos = (state.getBodyState().getTransform().getPosition().x - e.body().getPosition().x) * (1 - deltaTime);
 			float yPos = (state.getBodyState().getTransform().getPosition().y - e.body().getPosition().y) * (1 - deltaTime);
 			
-			System.out.println("Interpolating to: " + state.getBodyState().getTransform().getPosition().x + ", " + e.body().getPosition().x);
 			e.position(xPos, yPos);
 			e.rotation(state.getBodyState().getTransform().getRotation() * deltaTime + e.body().getAngle() * (1.0f - deltaTime));
 		}

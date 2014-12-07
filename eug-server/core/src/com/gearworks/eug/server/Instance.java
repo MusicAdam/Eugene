@@ -50,7 +50,6 @@ public class Instance {
 
 	public Instance(int id)
 	{
-		System.out.println("Instance created at: " + Utils.timeToString(Utils.generateTimeStamp()));
 		this.id = id;
 		b2ddbgRenderer = new Box2DDebugRenderer();
 		removePlayerQueue = new ConcurrentLinkedQueue<ServerPlayer>();
@@ -118,8 +117,8 @@ public class Instance {
 		Snapshot snapshot = world.getHistory().peek();
 		pl.addInput(input);
 		
-		if(snapshot != null){
-			snapshot.getClientInput().add(input); //Add the input to the snapshot in which the input happened client side
+		if(snapshot != null){			
+			snapshot.addInput(input); //Add the input to the snapshot in which the input happened client side
 			input.setSaved(true);
 			input.setCorrected(true);
 			simulator.simulate(snapshot, Utils.generateTimeStamp(), world.getHistory()); //Simulate a new world based on the client input
@@ -179,6 +178,7 @@ public class Instance {
 								PlayerInput input = iterator.next();
 								if(input.isCorrected()){
 									msg.getSnapshot().addInput(input);
+									System.out.println("Corrected " + input.getTimestamp());
 									iterator.remove();
 								}
 							}
@@ -191,7 +191,7 @@ public class Instance {
 									try {
 										Random rand = new Random();
 										int time = rand.nextInt(980) + 20;
-										Thread.sleep(90);
+										Thread.sleep(0);
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();

@@ -249,25 +249,27 @@ public class GameState implements State {
 		
 		if(EugClient.GetPlayer().getInputs().size() > 0){
 			boolean shouldCorrect = false;
-			for(PlayerInput serverInput : serverSnapshot.getClientInput()){
+			for(PlayerInput serverInput : serverSnapshot.getInput()){
 				Iterator<PlayerInput> iterator = EugClient.GetPlayer().getInputs().iterator();
 				
 				while(iterator.hasNext()){
 					PlayerInput clientInput = iterator.next();
 					
-					if(serverInput.getTimestamp() == clientInput.getTimestamp() &&
-					   serverInput.getTargetPlayerID() == clientInput.getTargetPlayerID()){
+					if(!clientInput.isSaved()){//If this input is not saved, don't wait for it and remove it
+						iterator.remove();
+					}else if(serverInput.getTimestamp() == clientInput.getTimestamp() &&
+					   serverInput.getTargetPlayerID() == clientInput.getTargetPlayerID()){ 
+						
 						clientInput.setCorrected(true);
 						iterator.remove();
 						
 						shouldCorrect = true;
-						System.out.println("Correcting input");
 					}
 				}
 			}
 			
 			if(!shouldCorrect){
-				System.out.println("NOPE GET OOT");
+				System.out.println("Waiting on input... ");
 				return; //Still waiting for corrected snapshot, dont want to interrupt our prediction with invalid server states.	
 						//TODO: There should be a timeout for this incase the packet containg the user input was lost.
 			}
