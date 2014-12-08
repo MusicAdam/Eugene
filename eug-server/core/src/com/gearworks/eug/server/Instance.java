@@ -191,7 +191,7 @@ public class Instance {
 									try {
 										Random rand = new Random();
 										int time = rand.nextInt(980) + 20;
-										Thread.sleep(0);
+										Thread.sleep(90);
 									} catch (InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();

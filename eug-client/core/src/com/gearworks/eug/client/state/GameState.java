@@ -65,6 +65,8 @@ public class GameState implements State {
 	private Snapshot latestRelatedSnapshot;
 	private int forceResetLimit = 2; //Updates until we decide correction has failed and we need to snap to server state.
 	private int forceResetCount = 0; //Number of updates we remain out of sync
+	private int updatesUntilForceCorrection = 10; //TODO: This should be a a config variable. Number of updates we will wait for a server correction on input until we accept any server snapshot.
+	private int updatesSinceLastCorrection = 0;	//Counter for updatesUntilForceCorrection
 	
 	private long startTime;
 	private long endTime;
@@ -255,8 +257,13 @@ public class GameState implements State {
 				while(iterator.hasNext()){
 					PlayerInput clientInput = iterator.next();
 					
-					if(!clientInput.isSaved()){//If this input is not saved, don't wait for it and remove it
+					if(updatesSinceLastCorrection >= updatesUntilForceCorrection){
+						shouldCorrect = true;
 						iterator.remove();
+					}
+					
+					if(!clientInput.isSaved()){
+						iterator.remove();//If this input is not saved, don't wait for it and remove it
 					}else if(serverInput.getTimestamp() == clientInput.getTimestamp() &&
 					   serverInput.getTargetPlayerID() == clientInput.getTargetPlayerID()){ 
 						
@@ -269,14 +276,13 @@ public class GameState implements State {
 			}
 			
 			if(!shouldCorrect){
-				System.out.println("Waiting on input... ");
+				updatesSinceLastCorrection++;
 				return; //Still waiting for corrected snapshot, dont want to interrupt our prediction with invalid server states.	
-						//TODO: There should be a timeout for this incase the packet containg the user input was lost.
 			}
 		}		
-		
+
+		updatesSinceLastCorrection = 0;
 		latestServerSnapshot = serverSnapshot;
-		//long clientTime = msg.getSnapshot().getTimestamp() - msg.getTravelTime() - 1000; //1000 is the custom delay we are using to simulate lag ss, normally this would be included in getTravelTime()
 		
 		latency = msg.getTravelTime();
 
