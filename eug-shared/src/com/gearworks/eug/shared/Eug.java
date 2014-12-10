@@ -1,0 +1,156 @@
+package com.gearworks.eug.shared;
+
+import java.util.List;
+import java.util.Map;
+
+import com.esotericsoftware.kryonet.Connection;
+import com.gearworks.eug.shared.state.StateManager;
+
+/*
+ * Provides a base class from which shared classes can call methods that should be implemented on both the client and server, but may be implemented differently
+ */
+public class Eug {
+	private static Eug singleton;
+	private static String mainThreadName; //This is the name of the thread that initialize is called on. Should be called by the user on the main thread.
+	
+	public Object playerLock = new Object();
+	public Object messageLock = new Object();
+	public Object entityLock = new Object();
+	
+	public class NotImplementedException extends Exception
+	{
+		private static final long serialVersionUID = 1L;
+	}
+	
+	public static Eug Get()
+	{
+		return singleton;
+	}
+	
+	public static Eug Set(Eug e)
+	{
+		singleton = e;
+		return Get();
+	}
+	
+	public static void Initialize(){
+		mainThreadName = Thread.currentThread().getName();
+	}
+	
+	public static boolean OnMainThread(){
+		return mainThreadName.equals(Thread.currentThread().getName());
+	}
+
+	protected World getWorld() throws NotImplementedException{ throw new NotImplementedException(); }
+	public static World GetWorld()
+	{
+		try {
+			return Get().getWorld();
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	protected StateManager getStateManager() throws NotImplementedException{ throw new NotImplementedException(); }
+	public static StateManager GetStateManager()
+	{
+		try {
+			return Get().getStateManager();
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+
+	protected void destroyEntity(NetworkedEntity ent) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static void DestroyEntity(NetworkedEntity ent)
+	{
+		try {
+			Get().destroyEntity(ent);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	protected NetworkedEntity spawnEntity(NetworkedEntity ent) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static NetworkedEntity SpawnEntity(NetworkedEntity ent)
+	{
+		try {
+			return Get().spawnEntity(ent);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+
+	protected Map<Integer, NetworkedEntity> getEntities() throws NotImplementedException{ throw new NotImplementedException(); }
+	public static Map<Integer, NetworkedEntity> GetEntities()
+	{
+		try {
+			return Get().getEntities();
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	protected Player findPlayerById(int id) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static Player FindPlayerById(int id){
+		try {
+			return Get().findPlayerById(id);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	protected NetworkedEntity findEntityById(int id) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static NetworkedEntity FindEntityById(int id) {
+		try {
+			return Get().findEntityById(id);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	/*
+	 * Returns the connection by the given connection id if it exists.
+	 */
+	protected Connection getConnectionById(int id) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static Connection GetConnectionById(int id){ 
+		try {
+			return Get().getConnectionById(id);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	protected boolean entityExists(int id) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static boolean EntityExists(int id) {
+		try {
+			return Get().entityExists(id);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	protected List<Player> getPlayers() throws NotImplementedException{ throw new NotImplementedException(); }
+	public static List<Player> GetPlayers(){
+		try {
+			return Get().getPlayers();
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	public void create(){}
+	public void update(float step){}
+	public void dispose(){}
+}
