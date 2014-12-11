@@ -8,10 +8,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.gearworks.eug.shared.EntityManager.EntityNotRegisteredException;
+import com.gearworks.eug.shared.events.EntityEventListener;
+import com.gearworks.eug.shared.events.PlayerEventListener;
+import com.gearworks.eug.shared.exceptions.*;
 import com.gearworks.eug.shared.Eug.NotImplementedException;
-import com.gearworks.eug.shared.exceptions.EntityBuildException;
-import com.gearworks.eug.shared.exceptions.EntityUpdateException;
+import com.gearworks.eug.shared.exceptions.EntityNotRegisteredException;
 import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.AbstractEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
@@ -20,11 +21,12 @@ import com.gearworks.eug.shared.utils.CircularBuffer;
 public class World {
 	String name;
 	ArrayList<EntityEventListener>			entityEventListeners = new ArrayList<EntityEventListener>();
-	HashMap<Integer, NetworkedEntity> 				entityMap = new HashMap<Integer, NetworkedEntity>();
+	HashMap<Short, NetworkedEntity> 		entityMap = new HashMap<Short, NetworkedEntity>();
 	ArrayList<Player> 		 				players = new ArrayList<Player>();
 	CircularBuffer<Snapshot>				history;
 	Snapshot 								latestSnapshot;
 	int										instanceId;
+	short									lastEntityID; //The last entity to be added to the world.
 	
 	//Entity queues
 	ConcurrentLinkedQueue<NetworkedEntity>			entitySpawnQueue = new ConcurrentLinkedQueue<NetworkedEntity>();
@@ -46,13 +48,15 @@ public class World {
 	private boolean simulator;
 	
 	public World(String name, int instanceId){
-		history = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
-		this.name = name;
+		this(name, instanceId, false);
 	}
 	
 	public World(String name, int instanceId, boolean sim){
+		if(!sim)
+			history = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
 		this.name = name;
 		simulator = sim;
+		lastEntityID = -1;
 	}
 	
 	public void update(float step){
@@ -116,11 +120,7 @@ public class World {
 		
 		for(AbstractEntityState state : snapshot.getEntityStates()){
 			NetworkedEntity ent = getEntity(state.getId());
-			try {
-				ent.snapToState(state);
-			} catch (Eug.NotImplementedException e) {
-				e.printStackTrace();
-			}
+			ent.snapToState(state);
 		}
 	}
 	
@@ -133,8 +133,8 @@ public class World {
 	public void synchronizeSnapshot(Snapshot snapshot){
 		HashSet<Integer> serverPlayerSet = new HashSet<Integer>();
 		HashSet<Integer> localPlayerSet = new HashSet<Integer>();
-		HashSet<Integer> serverEntitySet = new HashSet<Integer>();
-		HashSet<Integer> localEntitySet = new HashSet<Integer>();
+		HashSet<Short> serverEntitySet = new HashSet<Short>();
+		HashSet<Short> localEntitySet = new HashSet<Short>();
 		
 		if(isSynchronized(snapshot, serverPlayerSet, localPlayerSet, serverEntitySet, localEntitySet)) return;
 		
@@ -170,23 +170,24 @@ public class World {
 		}
 
 		//Get the serverPLayers - localPlayers to find which players have connected
-		HashSet<Integer> newEntityIds = new HashSet<Integer>(serverEntitySet);
+		HashSet<Short> newEntityIds = new HashSet<Short>(serverEntitySet);
 		newEntityIds.removeAll(localEntitySet);
 		
 		//Get localPlayers - serverPlayer to determine which players have disconnected
-		HashSet<Integer> deletedEntityIds = new HashSet<Integer>(localEntitySet);
+		HashSet<Short> deletedEntityIds = new HashSet<Short>(localEntitySet);
 		deletedEntityIds.removeAll(serverEntitySet);
 
-		for(Integer id : newEntityIds){
+		for(Short id : newEntityIds){
 			AbstractEntityState state = snapshot.getEntityState(id);
 			try {
-				EntityManager.Build(state.getType(), this, state);
-			} catch (EntityNotRegisteredException e) {
+				if(EntityManager.Build(getPlayer(state.getPlayerId()), state.getType(), this, state)==null)
+					throw new EntityBuildException("Unable to build entity, entity returned null");
+			} catch (EntityNotRegisteredException | EntityBuildException e) {
 				e.printStackTrace();
 			}
 		}
 		
-		for(Integer id : deletedEntityIds){
+		for(Short id : deletedEntityIds){
 			NetworkedEntity ent = getEntity(id);
 
 			if(ent != null){
@@ -196,15 +197,15 @@ public class World {
 	}
 	
 	//Checks if the same players/entities exist in the world that exist in the snapshot.
-	public boolean isSynchronized(Snapshot snapshot, HashSet<Integer> serverPlayerSet, HashSet<Integer> localPlayerSet, HashSet<Integer> serverEntitySet, HashSet<Integer> localEntitySet){
+	public boolean isSynchronized(Snapshot snapshot, HashSet<Integer> serverPlayerSet, HashSet<Integer> localPlayerSet, HashSet<Short> serverEntitySet, HashSet<Short> localEntitySet){
 		if(serverPlayerSet == null)
 			serverPlayerSet = new HashSet<Integer>();
 		if(localPlayerSet == null)
 			localPlayerSet = new HashSet<Integer>();
 		if(serverEntitySet == null)
-			serverEntitySet = new HashSet<Integer>();
+			serverEntitySet = new HashSet<Short>();
 		if(localEntitySet == null)
-			localEntitySet = new HashSet<Integer>();
+			localEntitySet = new HashSet<Short>();
 		
 		//Construct sets
 		for(PlayerState pl : snapshot.getPlayers())
@@ -219,7 +220,7 @@ public class World {
 			localEntitySet.add(ent.getId());
 		
 		HashSet<Integer> unsyncedPlayers = new HashSet<Integer>(serverPlayerSet);
-		HashSet<Integer> unsyncedEntities = new HashSet<Integer>(serverEntitySet);
+		HashSet<Short> unsyncedEntities = new HashSet<Short>(serverEntitySet);
 		
 		unsyncedPlayers.removeAll(localPlayerSet);
 		unsyncedEntities.removeAll(localEntitySet);
@@ -256,8 +257,11 @@ public class World {
 		if(Eug.OnMainThread() || simulator){
 			synchronized(entitySpawnLock){
 				if(ent.getPlayer().isValid()){
-					Debug.println("[World:spawn] entity " + ent.getId());
-					
+					if(simulator){
+						Debug.println("[Simulator:spawn] entity " + ent.getId());
+					}else{
+						Debug.println("[World:spawn] entity " + ent.getId());						
+					}
 					ent.spawn(this);
 					entityMap.put(ent.getId(), ent);
 					
@@ -303,6 +307,11 @@ public class World {
 			synchronized(playerAddLock){
 				if(!players.contains(pl)){
 					players.add(pl);
+					
+					for(PlayerEventListener listener : Eug.GetPlayerEventListeners()){
+						listener.AddedToWorld(pl);
+					}
+					
 					Debug.println("[World:addPlayer] Player " + pl.getId() + " added");
 				}
 				
@@ -321,6 +330,11 @@ public class World {
 		if(Eug.OnMainThread() || simulator){
 			synchronized(playerDeleteLock){
 				if(players.remove(pl)){
+					
+					for(PlayerEventListener listener : Eug.GetPlayerEventListeners()){
+						listener.RemovedFromWorld(pl);
+					}
+					
 					Debug.println("[World:removePlayer] Player " + pl.getId() + " removed");
 					return true;
 				}
@@ -394,7 +408,7 @@ public class World {
 		return entityMap.values();
 	}
 	
-	public HashMap<Integer, NetworkedEntity> getEntityMap(){
+	public HashMap<Short, NetworkedEntity> getEntityMap(){
 		return entityMap;
 	}
 
@@ -448,5 +462,17 @@ public class World {
 		}
 
 		return (history.peek() == null) ? last : history.peek();
+	}
+	
+	public short nextEntityID()
+	{
+		short id = (short) (lastEntityID + 1);
+		if(id < 0)
+			id = 0;
+		
+		while(getEntity(id) != null)
+			id++;
+		
+		return id;
 	}
 }

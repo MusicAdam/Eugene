@@ -16,12 +16,12 @@ import com.gearworks.eug.client.state.ConnectState;
 import com.gearworks.eug.client.state.GameState;
 import com.gearworks.eug.shared.Debug;
 import com.gearworks.eug.shared.NetworkedEntity;
-import com.gearworks.eug.shared.EntityEventListener;
 import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.World;
+import com.gearworks.eug.shared.events.EntityEventListener;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
@@ -94,6 +94,7 @@ public class EugClient extends Eug {
 	public static void SetInstance(int instanceId) {
 		EugClient.GetPlayer().setInstanceId(instanceId);
 		Eug.GetWorld().setInstanceId(instanceId);
+		EugClient.GetPlayer().setInstanceValid(true);
 		AssignInstanceMessage msg= new AssignInstanceMessage(instanceId, GetPlayer().getId());
 		GetPlayer().getConnection().sendUDP(msg);
 		Debug.println("[EugClient:SetInstance] Instance set to " + instanceId);
@@ -207,7 +208,7 @@ public class EugClient extends Eug {
 	}
 
 	@Override
-	public Map<Integer, NetworkedEntity> getEntities() {
+	public Map<Short, NetworkedEntity> getEntities() {
 		synchronized(entityLock){
 			return world.getEntityMap();
 		}
@@ -219,7 +220,7 @@ public class EugClient extends Eug {
 	}
 	
 	@Override
-	public NetworkedEntity findEntityById(int id){	
+	public NetworkedEntity findEntityById(short id){	
 		synchronized(entityLock){
 			dbg_entSearchCount++;
 			return world.getEntity(id);
@@ -245,7 +246,7 @@ public class EugClient extends Eug {
 	}
 	
 	@Override
-	protected boolean entityExists(int id){
+	protected boolean entityExists(short id){
 		return world.getEntityMap().containsKey(id);
 	}
 

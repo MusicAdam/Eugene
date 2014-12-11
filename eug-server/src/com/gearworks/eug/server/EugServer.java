@@ -28,6 +28,7 @@ public class EugServer extends Eug {
 	private Server server;
 	private float accum;
 	private int requestInstanceId; //Holds reference to the instance we are trying to spawn into
+	private boolean isRunning;
 	protected StateManager sm;
 	protected ArrayList<Instance> instances;
 	protected Queue<ServerPlayer> idlePlayers;
@@ -66,6 +67,8 @@ public class EugServer extends Eug {
 		sm.setState(null); //Set initial state
 		
 		instances = new ArrayList<Instance>();
+		
+		isRunning = true;
 	}
 
 	@Override
@@ -184,8 +187,8 @@ public class EugServer extends Eug {
 	}
 
 	@Override
-	public Map<Integer, NetworkedEntity> getEntities() {
-		HashMap<Integer, NetworkedEntity> entityMap = new HashMap<Integer, NetworkedEntity>();
+	public Map<Short, NetworkedEntity> getEntities() {
+		HashMap<Short, NetworkedEntity> entityMap = new HashMap<Short, NetworkedEntity>();
 		for(int i = 0; i < instances.size(); i++){
 			Instance instance = instances.get(i);
 			entityMap.putAll(instance.getWorld().getEntityMap());
@@ -272,5 +275,15 @@ public class EugServer extends Eug {
 			players.addAll(instance.getWorld().getPlayers());
 		}
 		return players;
+	}
+	
+	public boolean isRunning(){ return isRunning; }
+	
+	public static Instance GetInstanceByID(int id){
+		for(Instance inst : ((EugServer)Get()).instances){
+			if(inst.getId() == id)
+				return inst;
+		}
+		return null;
 	}
 }

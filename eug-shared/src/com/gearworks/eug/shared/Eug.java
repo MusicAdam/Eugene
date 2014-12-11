@@ -1,9 +1,11 @@
 package com.gearworks.eug.shared;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.esotericsoftware.kryonet.Connection;
+import com.gearworks.eug.shared.events.PlayerEventListener;
 import com.gearworks.eug.shared.state.StateManager;
 
 /*
@@ -16,6 +18,8 @@ public class Eug {
 	public Object playerLock = new Object();
 	public Object messageLock = new Object();
 	public Object entityLock = new Object();
+	
+	private ArrayList<PlayerEventListener>	playerEventListeners = new ArrayList<PlayerEventListener>();
 	
 	public class NotImplementedException extends Exception
 	{
@@ -35,6 +39,8 @@ public class Eug {
 	
 	public static void Initialize(){
 		mainThreadName = Thread.currentThread().getName();
+		
+		EntityManager.Register(NetworkedEntity.NETWORKED_ENTITIY, NetworkedEntity.class);
 	}
 	
 	public static boolean OnMainThread(){
@@ -86,8 +92,8 @@ public class Eug {
 	}
 	
 
-	protected Map<Integer, NetworkedEntity> getEntities() throws NotImplementedException{ throw new NotImplementedException(); }
-	public static Map<Integer, NetworkedEntity> GetEntities()
+	protected Map<Short, NetworkedEntity> getEntities() throws NotImplementedException{ throw new NotImplementedException(); }
+	public static Map<Short, NetworkedEntity> GetEntities()
 	{
 		try {
 			return Get().getEntities();
@@ -107,8 +113,8 @@ public class Eug {
 		}
 	}
 
-	protected NetworkedEntity findEntityById(int id) throws NotImplementedException{ throw new NotImplementedException(); }
-	public static NetworkedEntity FindEntityById(int id) {
+	protected NetworkedEntity findEntityById(short id) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static NetworkedEntity FindEntityById(short id) {
 		try {
 			return Get().findEntityById(id);
 		} catch (NotImplementedException e) {
@@ -130,8 +136,8 @@ public class Eug {
 		}
 	}
 
-	protected boolean entityExists(int id) throws NotImplementedException{ throw new NotImplementedException(); }
-	public static boolean EntityExists(int id) {
+	protected boolean entityExists(short id) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static boolean EntityExists(short id) {
 		try {
 			return Get().entityExists(id);
 		} catch (NotImplementedException e) {
@@ -148,6 +154,19 @@ public class Eug {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	public static PlayerEventListener AddPlayerListener(PlayerEventListener playerEventListener){
+		Get().playerEventListeners.add(playerEventListener);
+		return playerEventListener;
+	}
+	
+	public static void RemovePlayerListener(PlayerEventListener playerEventListener){
+		Get().playerEventListeners.remove(playerEventListener);
+	}
+	
+	public static ArrayList<PlayerEventListener> GetPlayerEventListeners(){
+		return Get().playerEventListeners;
 	}
 	
 	public void create(){}

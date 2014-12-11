@@ -7,25 +7,23 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.gearworks.eug.shared.Eug.NotImplementedException;
+import com.gearworks.eug.shared.exceptions.EntityBuildException;
+import com.gearworks.eug.shared.exceptions.EntityNotRegisteredException;
 import com.gearworks.eug.shared.state.AbstractEntityState;
 
 public class EntityManager {	
-	public static HashMap<NetworkedEntity.Type, Class> registry = new HashMap<NetworkedEntity.Type, Class>();
+	public static HashMap<Short, Class> registry = new HashMap<Short, Class>();
 	
-	public static class EntityNotRegisteredException extends Exception{
-		private static final long serialVersionUID = 1L;
-		
-		public EntityNotRegisteredException(String type){
-			super(type);
-		}
-	}
-	
-	public static void Register(NetworkedEntity.Type typeEnum, Class entityClass){
+	//Register an entity type to its class so that it can be built
+	public static void Register(Short typeEnum, Class entityClass){
 		registry.put(typeEnum, entityClass);
 	}
 	
-	//Instantiates and spawns an entity
-	public static NetworkedEntity Build(NetworkedEntity.Type type, World world, AbstractEntityState state) throws EntityNotRegisteredException{
+	//Instantiates an entity and adds it to the world.
+	public static NetworkedEntity Build(Player player, Short type, World world, AbstractEntityState state) throws EntityNotRegisteredException, EntityBuildException{
+		if(world.getEntities().size() >= SharedVars.MAX_ENTITIES)
+			throw new EntityBuildException("Cannot build new entity: Max entities reached.");
+		
 		NetworkedEntity ent = null;
 		Class klass = registry.get(type);
 		
@@ -33,15 +31,11 @@ public class EntityManager {
 			throw new EntityNotRegisteredException(type.toString());
 		
 		try {
-			Constructor ctor = klass.getConstructor(new Class[]{int.class});
-			ent = (NetworkedEntity)ctor.newInstance(0);//Eug.GetEntities().size()
+			Constructor ctor = klass.getConstructor(new Class[]{short.class, Player.class});
+			ent = (NetworkedEntity)ctor.newInstance(world.nextEntityID(), player);
 			
 			if(state != null){
-				try {
-					ent.snapToState(state);
-				} catch (NotImplementedException e) {
-					e.printStackTrace();
-				}
+				ent.snapToState(state);
 			}
 			
 			return world.spawn(ent);
@@ -62,10 +56,14 @@ public class EntityManager {
 		return null;
 	}
 	
-	public static NetworkedEntity.Type GetEntityType(NetworkedEntity ent){
-		Iterator<Entry<NetworkedEntity.Type, Class>> iterator = registry.entrySet().iterator();
+	public static NetworkedEntity Build(Player player, Short type, World world) throws EntityNotRegisteredException, EntityBuildException{
+		return Build(player, type, world, null);
+	}
+	
+	public static Short GetEntityType(NetworkedEntity ent){
+		Iterator<Entry<Short, Class>> iterator = registry.entrySet().iterator();
 		while(iterator.hasNext()){
-			Entry<NetworkedEntity.Type, Class> entry = iterator.next();
+			Entry<Short, Class> entry = iterator.next();
 			
 			if(entry.getValue().equals(ent.getClass())){
 				return entry.getKey();

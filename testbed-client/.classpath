@@ -2,14 +2,15 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
-	<classpathentry kind="lib" path="lib/lwjgl/jar/disruptor.jar"/>
-	<classpathentry kind="lib" path="lib/lwjgl/jar/lwjgl.jar">
+	<classpathentry kind="lib" path="C:/Users/i55645/Documents/disk/testbed-shared/lib/lwjgl/jar/disruptor.jar"/>
+	<classpathentry kind="lib" path="C:/Users/i55645/Documents/disk/testbed-shared/lib/lwjgl/jar/lwjgl.jar">
 		<attributes>
-			<attribute name="javadoc_location" value="file:/C:/Users/i55645/Documents/disk/testbed-client/lib/lwjgl/doc/3rdparty/"/>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="testbed-client/lib/lwjgl/native/windows/x64"/>
+			<attribute name="javadoc_location" value="file:/C:/Users/i55645/Documents/disk/testbed-shared/lib/lwjgl/doc/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="testbed-shared/lib/lwjgl/native/windows/x64"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/eug-client"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/eug-shared"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/testbed-shared"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

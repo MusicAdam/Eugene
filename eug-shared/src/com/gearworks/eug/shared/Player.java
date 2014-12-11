@@ -12,6 +12,7 @@ public class Player {
 	private long	lastSnapshotTimestamp; //The last time the player received as snapshot clientside or was sent a snapshot serverside (not included in player state as it is different client/server side
 	private boolean isInitialized = false;			//True when the initial snapshot has been successfully sent to the player
 	private boolean isDisconnected = false; //When true player will be removed from idle players/instances
+	private boolean isInstanceValidated = false; //True after AssignInstance handshake
 	private transient ArrayList<NetworkedEntity> entities;
 	private transient ArrayList<PlayerInput> inputs; //A record of inputs. On client: inputs will be removed once they have been corrected.
 	
@@ -72,7 +73,8 @@ public class Player {
 	
 	//Returns true after client is synced and ready to play
 	public boolean isValid(){ return isInstanceValid() && isInitialized() && !isDisconnected(); }
-	public boolean isInstanceValid(){ return instanceId != -1; }
+	public boolean isInstanceValid(){ return isInstanceValidated; }
+	public void setInstanceValid(boolean toggle){ isInstanceValidated = toggle; }
 	public long getValidationTimestamp(){ return validationTimestamp; }
 	public void setValidationTimestamp(long ts){ validationTimestamp = ts; } 
 	public void dispose(){
@@ -119,7 +121,8 @@ public class Player {
 								id,
 								validationTimestamp,
 								isInitialized,
-								isDisconnected);
+								isDisconnected,
+								isInstanceValidated);
 	}
 	
 	@Override

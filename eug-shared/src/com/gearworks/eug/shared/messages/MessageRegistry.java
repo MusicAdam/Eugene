@@ -9,9 +9,11 @@ import com.gearworks.eug.shared.PlayerState;
 import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.AbstractEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
+import com.gearworks.eug.shared.utils.Vector2;
 
 public class MessageRegistry {	
 	private ArrayList<MessageCallback> callbacks;
+	private static ArrayList<Class> userClasses = new ArrayList<Class>();
 	
 	/*
 	 * MessageRegistry.Initialize
@@ -29,7 +31,7 @@ public class MessageRegistry {
 		kryo.register(AbstractEntityState[].class);
 		kryo.register(Snapshot.class);
 		kryo.register(float[].class);
-		kryo.register(NetworkedEntity.Type.class);
+		kryo.register(short.class);
 		kryo.register(InitializeSceneMessage.class);
 		kryo.register(PlayerInput.class);
 		kryo.register(PlayerInput.Event.class);
@@ -38,7 +40,16 @@ public class MessageRegistry {
 		kryo.register(PlayerState[].class);
 		kryo.register(ArrayList.class);
 		kryo.register(PlayerInput[].class);
+		kryo.register(String.class);
+		kryo.register(Vector2.class);
 		
+		for(Class klass : userClasses){
+			kryo.register(klass);
+		}
+	}
+	
+	public static void RegisterClass(Class klass){
+		userClasses.add(klass);
 	}
 	
 	public MessageRegistry()

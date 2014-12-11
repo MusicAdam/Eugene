@@ -14,6 +14,7 @@ import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.Simulator;
 import com.gearworks.eug.shared.World;
+import com.gearworks.eug.shared.events.PlayerEventListener;
 import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.input.PlayerInput.Event;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
@@ -47,6 +48,7 @@ public class Instance {
 		serverPlayer = new ServerPlayer(-1);
 		serverPlayer.setInitialized(true);
 		serverPlayer.setInstanceId(id);
+		serverPlayer.setInstanceValid(true);
 		world.addPlayer(serverPlayer);
 		lastSnapshotSent = world.generateSnapshot();
 		tick = 0;
@@ -68,7 +70,7 @@ public class Instance {
 				//Validate player
 				for(Player pl : thisInst.world.getPlayers()){
 					if(!pl.isInstanceValid() && pl.getId() == aMsg.getPlayerId()){
-						pl.setInstanceId(thisInst.getId());
+						pl.setInstanceValid(true);
 					}
 				}
 			}
@@ -77,8 +79,14 @@ public class Instance {
 			@Override
 			public void messageReceived(Connection c, Message msg){
 				Player pl = thisInst.findPlayerByConnection(c);
-				if(pl != null)
-					pl.setInitialized(true);				
+				if(pl != null){
+					pl.setInitialized(true);
+
+					
+					for(PlayerEventListener listener : Eug.GetPlayerEventListeners()){
+						listener.Validated(pl);
+					}
+				}
 			}
 		});
 		EugServer.GetMessageRegistry().listen(PlayerInput.class, new MessageCallback(){
@@ -165,21 +173,7 @@ public class Instance {
 							}
 							
 							pl.setLastSnapshotTimestamp(world.getLatestSnapshot().getTimestamp());
-							final Player spl = pl;
-							new Thread(){
-								@Override
-								public void run(){
-									try {
-										Random rand = new Random();
-										int time = rand.nextInt(980) + 20;
-										Thread.sleep(90);
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-									msg.sendUDP(spl.getConnection());
-								}
-							}.start();
+							msg.sendUDP(pl.getConnection());
 							snapshotSent = true;
 						}
 					}
@@ -233,6 +227,8 @@ public class Instance {
 	public boolean addPlayer(ServerPlayer player){
 		if(isFull()) return false;
 
+		player.setInstanceId(id);
+		
 		world.addPlayer(player);
 		sendAssignInstanceMessage(player);
 		

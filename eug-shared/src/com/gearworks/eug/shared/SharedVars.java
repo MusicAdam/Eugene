@@ -8,6 +8,7 @@ public class SharedVars {
 	public static final int WRITE_BUFFER_SIZE = 32768;
 	public static final int OBJECT_BUFFER_SIZE = 4096;
 	public static final float STEP = 1/60f;
+	public static final short MAX_ENTITIES = Short.MAX_VALUE; //This is the maximum possible number of entities, because short is used as the unique ID
 	
 	public static final boolean DEBUG_ENTITIES = false; //turns on aabb rendering
 	public static final boolean DEBUG_LOG = false;	//Enables log file writing

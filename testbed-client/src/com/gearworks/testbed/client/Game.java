@@ -1,15 +1,27 @@
+package com.gearworks.testbed.client;
 import org.lwjgl.Sys;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 
 import com.gearworks.eug.client.EugClient;
+import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
+import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.SharedVars;
+import com.gearworks.eug.shared.exceptions.EntityBuildException;
+import com.gearworks.eug.shared.exceptions.EntityNotRegisteredException;
+import com.gearworks.shared.Initializer;
+import com.gearworks.testbed.shared.entities.Entity;
 
 import java.nio.ByteBuffer;
  
 
 
+
+
+
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
@@ -39,10 +51,11 @@ public class Game {
 			init();
 			initEug();
 			loop();
+		}catch(Exception e){
+			e.printStackTrace();
 		} finally {
 			glfwTerminate();
 			errorCallback.release();
-			//client.dispose();
 		}
 	}
 	
@@ -88,7 +101,10 @@ public class Game {
 	
 	private void initEug(){
 		client = (EugClient)Eug.Set(new EugClient());
+		Initializer.RegisterClasses();
 		client.create();
+
+		Entity.RegisterEntities();
 	}
 	
 	private void loop(){
@@ -107,13 +123,19 @@ public class Game {
         // Set the clear color
         glClearColor(0.3f, 0.3f, 0.4f, 0.0f);
         
-        Entity test = new Entity(0);
  
         // Run the rendering loop until the user has attempted to close
         // the window or has pressed the ESCAPE key.
         while ( glfwWindowShouldClose(window) == GL_FALSE ) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
- 
+
+            Iterator<Entry<Short, NetworkedEntity>> iterator = client.getEntities().entrySet().iterator();
+            
+            while(iterator.hasNext()){
+            	NetworkedEntity ent = iterator.next().getValue();
+            	ent.render();
+            }
+            
             glfwSwapBuffers(window); // swap the color buffers
        
             // Poll for window events. The key callback above will only be
@@ -122,8 +144,9 @@ public class Game {
             
             client.update(SharedVars.STEP);
             
-            test.render();
         }
+        
+		client.dispose();
 		
 	}
 	

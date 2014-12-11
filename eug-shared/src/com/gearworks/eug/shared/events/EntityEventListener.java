@@ -1,5 +1,6 @@
-package com.gearworks.eug.shared;
+package com.gearworks.eug.shared.events;
 
+import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.state.AbstractEntityState;
 
 public class EntityEventListener {
