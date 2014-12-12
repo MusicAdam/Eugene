@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.events.PlayerEventListener;
+import com.gearworks.eug.shared.input.InputMapper;
 import com.gearworks.eug.shared.state.StateManager;
 
 /*
@@ -20,6 +21,7 @@ public class Eug {
 	public Object entityLock = new Object();
 	
 	private ArrayList<PlayerEventListener>	playerEventListeners = new ArrayList<PlayerEventListener>();
+	private static InputMapper inputMapper;
 	
 	public class NotImplementedException extends Exception
 	{
@@ -168,6 +170,12 @@ public class Eug {
 	public static ArrayList<PlayerEventListener> GetPlayerEventListeners(){
 		return Get().playerEventListeners;
 	}
+	
+	public static void SetInputMapper(InputMapper im){
+		inputMapper = im;
+	}
+	
+	public static InputMapper GetInputMapper(){ return inputMapper; }
 	
 	public void create(){}
 	public void update(float step){}

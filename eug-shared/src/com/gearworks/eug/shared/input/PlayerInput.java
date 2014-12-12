@@ -37,11 +37,6 @@ public class PlayerInput extends Message{
 	private transient boolean saved;		//Whether this input has been picked up by a snapshot
 											//This is transient because "																"
 	
-	//Resolves an input
-	public static void Resolve(World world, PlayerInput input){
-		Player pl = world.getPlayer(input.targetPlayerID);
-		pl.resolveInput(input);
-	}
 	
 	public PlayerInput(){
 		event = null;
@@ -62,7 +57,8 @@ public class PlayerInput extends Message{
 	public PlayerInput(PlayerInput cpy){
 		this.timestamp = cpy.timestamp;
 		this.event = cpy.event;
-		this.infoVector = new Vector2(cpy.infoVector.x, cpy.infoVector.y);
+		if(cpy.infoVector != null)
+			this.infoVector = new Vector2(cpy.infoVector.x, cpy.infoVector.y);
 		this.key = cpy.key;
 		this.targetPlayerID = cpy.targetPlayerID;
 	}

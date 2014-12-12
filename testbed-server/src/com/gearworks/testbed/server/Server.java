@@ -22,6 +22,8 @@ public class Server {
 			while(server.isRunning()){
 				server.update(SharedVars.STEP);
 			}
+		}catch (Exception e){
+			throw e;
 		}finally{
 			server.dispose();
 		}
@@ -30,7 +32,7 @@ public class Server {
 	private void init(){
 		
 		server = (EugServer) Eug.Set(new EugServer());
-		Initializer.RegisterClasses();
+		Initializer.Initialize();
 		server.create();
 		
 		Entity.RegisterEntities();
@@ -46,7 +48,6 @@ public class Server {
 				
 				try {
 					EntityManager.Build(player, Entity.ENTITY, playerInstance.getWorld());
-					System.out.println("BUILT ENT");
 				} catch (EntityNotRegisteredException e) {
 					e.printStackTrace();
 				} catch (EntityBuildException e) {

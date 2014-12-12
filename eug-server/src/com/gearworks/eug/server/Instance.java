@@ -123,7 +123,7 @@ public class Instance {
 			
 			world.snapToSnapshot(simulator.getResult()); //Apply correction
 		}else{
-			PlayerInput.Resolve(world, input);	
+			Eug.GetInputMapper().get(input.getEvent()).resolve(world, input);	
 			input.setCorrected(true);
 		}
 	}
@@ -167,7 +167,6 @@ public class Instance {
 								PlayerInput input = iterator.next();
 								if(input.isCorrected()){
 									msg.getSnapshot().addInput(input);
-									System.out.println("Corrected " + input.getTimestamp());
 									iterator.remove();
 								}
 							}

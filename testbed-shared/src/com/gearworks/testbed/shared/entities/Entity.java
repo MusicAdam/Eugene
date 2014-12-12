@@ -48,6 +48,7 @@ public class Entity extends NetworkedEntity {
 	
 	public Vector2 getPosition(){ return position; }
 	public void setPosition(Vector2 pos){ position = pos; }
+	public void setPosition(float x, float y){ setPosition(new Vector2(x, y)); }
 	
 	@Override
 	public AbstractEntityState getState() throws NotImplementedException{		

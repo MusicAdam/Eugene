@@ -49,12 +49,16 @@ public class Simulator {
 					
 					synchronized(world.historyLock){
 						int inc = 0;
+						try{
 						while(!history.isEmpty() && history.peek(inc).getTimestamp() <= simTime){
 							Snapshot snap = history.peek(inc);
 							for(PlayerInput input : snap.getInput()){
-								PlayerInput.Resolve(world, input);
+								Eug.GetInputMapper().get(input.getEvent()).resolve(world, input);
 							}
 							inc++;
+						}
+						}catch (Exception e){
+							throw e;
 						}
 					}
 	

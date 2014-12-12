@@ -29,6 +29,7 @@ public class Player {
 		this.validationTimestamp = state.getValidationTimestamp();
 		this.isInitialized = state.isInitialized();
 		this.isDisconnected = state.isDisconnected();
+		this.isInstanceValidated = state.isInstanceValidated();
 		entities = new ArrayList<NetworkedEntity>();
 		inputs = new ArrayList<PlayerInput>();
 	}

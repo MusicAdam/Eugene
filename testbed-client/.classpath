@@ -12,5 +12,10 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/eug-client"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/eug-shared"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/testbed-shared"/>
+	<classpathentry kind="lib" path="/eug-shared/lib/kryonet-2.21/kryonet-2.21-all.jar" sourcepath="/eug-shared/lib/kryonet-2.21/src">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/C:/Users/i55645/Documents/disk/eug-shared/lib/kryonet-2.21/javadoc/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

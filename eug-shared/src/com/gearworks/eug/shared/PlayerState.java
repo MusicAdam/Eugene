@@ -58,6 +58,9 @@ public class PlayerState {
 		return isDisconnected;
 	}
 	
+	public boolean isInstanceValidated(){
+		return isInstanceValidated;
+	}
 
 	
 	@Override

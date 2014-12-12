@@ -392,8 +392,10 @@ public class World {
 		return states;
 	}
 	
-	public NetworkedEntity getEntity(int id){
-		return entityMap.get(id);
+	public NetworkedEntity getEntity(short id){
+		NetworkedEntity ent = entityMap.get(id);		
+		return ent;
+		
 	}
 
 	public ArrayList<Player> getPlayers() {
@@ -472,7 +474,7 @@ public class World {
 		
 		while(getEntity(id) != null)
 			id++;
-		
+			
 		return id;
 	}
 }

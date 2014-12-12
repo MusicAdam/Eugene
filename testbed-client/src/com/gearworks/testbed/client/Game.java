@@ -4,21 +4,16 @@ import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 
 import com.gearworks.eug.client.EugClient;
-import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.SharedVars;
-import com.gearworks.eug.shared.exceptions.EntityBuildException;
-import com.gearworks.eug.shared.exceptions.EntityNotRegisteredException;
+import com.gearworks.eug.shared.input.InputMapper;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.shared.Initializer;
 import com.gearworks.testbed.shared.entities.Entity;
 
 import java.nio.ByteBuffer;
  
-
-
-
-
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -37,6 +32,7 @@ public class Game {
 	
 	//Eugene stuff
 	EugClient client;
+	InputMapper inputMapper;
 	
 	//LWJGL
 	private GLFWErrorCallback errorCallback;
@@ -76,8 +72,11 @@ public class Game {
         glfwSetKeyCallback(window, keyCallback = new GLFWKeyCallback(){
         	@Override
         	public void invoke(long window, int key, int scancode, int action, int mods){
-                if ( key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE )
+                if ( key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE ){
                     glfwSetWindowShouldClose(window, GL_TRUE); // We will detect this in our rendering loop
+                }else if(action == GLFW_PRESS || action == GLFW_REPEAT){
+                	handleKey(key);
+                }
         	}
         });
  
@@ -101,10 +100,10 @@ public class Game {
 	
 	private void initEug(){
 		client = (EugClient)Eug.Set(new EugClient());
-		Initializer.RegisterClasses();
+		Initializer.Initialize();
 		client.create();
 
-		Entity.RegisterEntities();
+		Entity.RegisterEntities();		
 	}
 	
 	private void loop(){
@@ -148,6 +147,12 @@ public class Game {
         
 		client.dispose();
 		
+	}
+	
+	private void handleKey(int key){
+		PlayerInput input = new PlayerInput(0, EugClient.GetPlayer().getId(), PlayerInput.Event.Key, null, key);
+		Eug.GetInputMapper().get(PlayerInput.Event.Key).resolve(EugClient.GetWorld(), input);
+		input.sendUDP(EugClient.GetPlayer().getConnection());
 	}
 	
 	public static void main(String[] args){
