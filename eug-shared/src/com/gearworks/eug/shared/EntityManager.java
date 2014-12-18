@@ -40,20 +40,18 @@ public class EntityManager {
 			
 			return world.spawn(ent);
 		} catch (NoSuchMethodException e) {
-			System.out.println("No valid constructor found for Entity of type " + type);
+			throw new EntityBuildException("No valid constructor found for Entity of type " + type);
 		}catch(SecurityException e){
-			e.printStackTrace();
+			throw new EntityBuildException(e.getMessage());
 		} catch (InstantiationException e) {
-			e.printStackTrace();
+			throw new EntityBuildException(e.getMessage());
 		} catch (IllegalAccessException e) {
-			e.printStackTrace();
+			throw new EntityBuildException(e.getMessage());
 		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
+			throw new EntityBuildException(e.getMessage());
 		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
+			throw new EntityBuildException(e.getMessage());
+		}		
 	}
 	
 	public static NetworkedEntity Build(Player player, Short type, World world) throws EntityNotRegisteredException, EntityBuildException{

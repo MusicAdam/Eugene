@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.gearworks.eug.shared.events.EntityEventListener;
@@ -17,6 +18,7 @@ import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.AbstractEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
+import com.gearworks.eug.shared.utils.Utils;
 
 public class World {
 	String name;
@@ -26,7 +28,9 @@ public class World {
 	CircularBuffer<Snapshot>				history;
 	Snapshot 								latestSnapshot;
 	int										instanceId;
+	int										tick;
 	short									lastEntityID; //The last entity to be added to the world.
+	boolean 								recordHistory; //Should snapshots be saved?
 	
 	//Entity queues
 	ConcurrentLinkedQueue<NetworkedEntity>			entitySpawnQueue = new ConcurrentLinkedQueue<NetworkedEntity>();
@@ -34,6 +38,7 @@ public class World {
 	//Player queues
 	ConcurrentLinkedQueue<Player>			playerAddQueue = new ConcurrentLinkedQueue<Player>();
 	ConcurrentLinkedQueue<Player>			playerDeleteQueue = new ConcurrentLinkedQueue<Player>();
+	ConcurrentLinkedQueue<PlayerInput> 		inputQueue = new ConcurrentLinkedQueue<PlayerInput>();
 	
 	
 	//Entity locks
@@ -46,6 +51,10 @@ public class World {
 	Object									historyLock = new Object();
 	
 	private boolean simulator;
+	private float accum = 0;
+	private long time = Utils.generateTimeStamp();
+	private long frame_time = Utils.generateTimeStamp();
+	private int frames = 0;
 	
 	public World(String name, int instanceId){
 		this(name, instanceId, false);
@@ -57,58 +66,80 @@ public class World {
 		this.name = name;
 		simulator = sim;
 		lastEntityID = -1;
+		recordHistory = true;
 	}
 	
 	public void update(float step){
-		
-		//
-		//Process new players
-		synchronized(playerAddLock){
-			while(!playerAddQueue.isEmpty())
-				addPlayer(playerAddQueue.poll());			
-		}
-		
-		//
-		//Process deleted players
-		synchronized(playerDeleteLock){
-			while(!playerDeleteQueue.isEmpty())
-				addPlayer(playerDeleteQueue.poll());			
-		}
-		
-		//
-		//Process new entities
-		synchronized(entitySpawnLock){
-			while(!entitySpawnQueue.isEmpty())
-				spawn(entitySpawnQueue.poll());
-		}
-		
-		//
-		//Process deleted entities
-		synchronized(entityDeleteLock){
-			while(!entityDeleteQueue.isEmpty()){
-				destroy(entityDeleteQueue.poll());
+		while(accum > SharedVars.STEP){
+			frames++;
+			accum -= SharedVars.STEP;
+			
+			//
+			//Process new players
+			synchronized(playerAddLock){
+				while(!playerAddQueue.isEmpty())
+					addPlayer(playerAddQueue.poll());			
 			}
-		}
-				
-		if(!simulator){			
-			for(Player player : Eug.GetPlayers()){
-				for(PlayerInput input : player.getInputs()){
-					if(!input.isSaved()){
-						latestSnapshot.addInput(input);
-					}
-				}
-				
-				
-				for(NetworkedEntity ent : player.getEntities()){
-					ent.update();
+			
+			//
+			//Process deleted players
+			synchronized(playerDeleteLock){
+				while(!playerDeleteQueue.isEmpty())
+					addPlayer(playerDeleteQueue.poll());			
+			}
+			
+			//
+			//Process new entities
+			synchronized(entitySpawnLock){
+				while(!entitySpawnQueue.isEmpty())
+					spawn(entitySpawnQueue.poll());
+			}
+			
+			//
+			//Process deleted entities
+			synchronized(entityDeleteLock){
+				while(!entityDeleteQueue.isEmpty()){
+					destroy(entityDeleteQueue.poll());
 				}
 			}
 			
-			synchronized(historyLock){
-				history.push(generateSnapshot());
-				latestSnapshot = history.peekTail();
+			//
+			//Process player input
+			while(!inputQueue.isEmpty()){
+				PlayerInput input = inputQueue.poll();
+				Player pl = Eug.GetInputMapper().get(input.getEvent()).resolve(this, input, step);
+				
+				input.sendUDP(pl.getConnection());
 			}
+					
+			if(!simulator && recordHistory){
+				for(Player player : Eug.GetPlayers()){
+					for(PlayerInput input : player.getInputs()){
+						if(!input.isSaved()){
+							latestSnapshot.addInput(input);
+						}
+					}
+					
+					
+					for(NetworkedEntity ent : player.getEntities()){
+						ent.update();
+					}
+				}
+				
+				synchronized(historyLock){
+					history.push(generateSnapshot());
+					latestSnapshot = history.peekTail();
+				}
+			}
+			
+			tick++;
+			
+			if(tick < 0) //Fix integer wrapping
+				tick++;
 		}
+		
+		accum += (float)(Utils.generateTimeStamp() - time)/1000;
+		time = Utils.generateTimeStamp();
 	}
 	
 	public void render(){
@@ -121,7 +152,9 @@ public class World {
 		for(AbstractEntityState state : snapshot.getEntityStates()){
 			NetworkedEntity ent = getEntity(state.getId());
 			ent.snapToState(state);
-		}
+		}		
+
+		tick = snapshot.getTick();
 	}
 	
 	/*
@@ -239,7 +272,7 @@ public class World {
 			int inc = 0;
 			
 			while(inc < history.count()){
-				if(history.peek(inc).getTimestamp() + epsilon > time && history.peek(inc).getTimestamp() - epsilon < time){
+				if(Utils.timeCompareEpsilon(history.peek(inc).getTimestamp(), time, epsilon)){
 					return history.peek(inc);
 				}
 				inc++;
@@ -264,12 +297,15 @@ public class World {
 					}
 					ent.spawn(this);
 					entityMap.put(ent.getId(), ent);
+					lastEntityID = ent.getId();
 					
 					for(EntityEventListener listener : entityEventListeners){
 						listener.onCreate(ent);
 					}
 					
 					return ent;
+				}else{
+					Debug.println("[World:spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getPlayer().getId() + "] is invalid.", Debug.Reporting.Warning);
 				}
 			}
 		}else{
@@ -361,7 +397,6 @@ public class World {
 			
 			for(PlayerInput input : pl.getInputs()){
 				if(!input.isSaved()){
-					input.setSaved(true);
 					inputsList.add(input);
 				}
 			}
@@ -370,7 +405,7 @@ public class World {
 		PlayerInput[] inputsArray = new PlayerInput[inputsList.size()];
 		inputsList.toArray(inputsArray);
 		
-		return new Snapshot(instanceId, playerStates, getEntityStates(), inputsArray);
+		return new Snapshot(instanceId, playerStates, getEntityStates(), inputsArray, getTick());
 	}
 	
 	public AbstractEntityState[] getEntityStates() {
@@ -457,13 +492,14 @@ public class World {
 	
 	public String getName(){ return name; }
 
-	public Snapshot pruneHistory(long timestamp) {
-		Snapshot last = null; 
-		while(!history.isEmpty() && history.peek().getTimestamp() < timestamp){
-			last = history.pop();
-		}
-
-		return (history.peek() == null) ? last : history.peek();
+	public void pruneHistory(int tick) {
+		while(!history.isEmpty() && history.peek().getTick() < tick)
+			history.pop();
+	}
+	
+	public void pruneHistory(long time) {
+		while(!history.isEmpty() && history.peek().getTimestamp() < time)
+			history.pop();
 	}
 	
 	public short nextEntityID()
@@ -476,5 +512,20 @@ public class World {
 			id++;
 			
 		return id;
+	}
+	
+	public int getTick(){
+		return tick;
+	}
+	
+	public void setTick(int tick){
+		this.tick = tick;
+	}
+	
+	public void setRecordHistory(boolean t){ recordHistory = t; }
+	public boolean shouldRecordHistory(){ return recordHistory; }
+
+	public void queueInput(PlayerInput input) {
+		inputQueue.add(input);		
 	}
 }

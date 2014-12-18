@@ -9,6 +9,7 @@ import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.input.InputMapper;
 import com.gearworks.eug.shared.input.PlayerInput;
+import com.gearworks.eug.shared.utils.Utils;
 import com.gearworks.shared.Initializer;
 import com.gearworks.testbed.shared.entities.Entity;
 
@@ -65,7 +66,7 @@ public class Game {
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE); // the window will stay hidden after creation
         glfwWindowHint(GLFW_RESIZABLE, GL_TRUE); // the window will be resizable
         
-        window = glfwCreateWindow(WIDTH, HEIGHT, "EUG Testbed", NULL, NULL);
+        window = glfwCreateWindow(WIDTH, HEIGHT, "EUG Testbed - Client", NULL, NULL);
         if(window == NULL)
         	throw new RuntimeException("Failed to create the GLFW window");
         
@@ -121,7 +122,6 @@ public class Game {
         
         // Set the clear color
         glClearColor(0.3f, 0.3f, 0.4f, 0.0f);
-        
  
         // Run the rendering loop until the user has attempted to close
         // the window or has pressed the ESCAPE key.
@@ -141,8 +141,7 @@ public class Game {
             // invoked during this call.
             glfwPollEvents();
             
-            client.update(SharedVars.STEP);
-            
+	        client.update(SharedVars.STEP);    
         }
         
 		client.dispose();
@@ -150,9 +149,8 @@ public class Game {
 	}
 	
 	private void handleKey(int key){
-		PlayerInput input = new PlayerInput(0, EugClient.GetPlayer().getId(), PlayerInput.Event.Key, null, key);
-		Eug.GetInputMapper().get(PlayerInput.Event.Key).resolve(EugClient.GetWorld(), input);
-		input.sendUDP(EugClient.GetPlayer().getConnection());
+		PlayerInput input = new PlayerInput(0, EugClient.GetPlayer().getId(), PlayerInput.Event.Key, null, key, Eug.GetWorld().getTick());
+		EugClient.GenerateInput(EugClient.GetPlayer().getId(), PlayerInput.Event.Key, null, key);
 	}
 	
 	public static void main(String[] args){

@@ -33,11 +33,9 @@ public class Instance {
 	public static long SNAPSHOT_DELAY  = 100; //Time in ms to wait before sending new snapshot
 	
 	private int id;
-	private int tick;			//Tick indicates a relative time. It is incremented every time a snapshot is generated
 	private World			world;
 	private Queue<ServerPlayer> 	removePlayerQueue;
 	private ServerPlayer serverPlayer; //This is the player to which level entities belong.
-	private Snapshot lastSnapshotSent;
 	private Simulator simulator;
 
 	public Instance(int id)
@@ -50,8 +48,6 @@ public class Instance {
 		serverPlayer.setInstanceId(id);
 		serverPlayer.setInstanceValid(true);
 		world.addPlayer(serverPlayer);
-		lastSnapshotSent = world.generateSnapshot();
-		tick = 0;
 		simulator = new Simulator();
 		
 		//Setup message handlers
@@ -99,40 +95,40 @@ public class Instance {
 	
 	public void initialize(){}
 	
-	protected void clientInputReceived(Connection c, PlayerInput input) {		
-		//ignore if input is from the future
-		if(input.getTimestamp() > Utils.generateTimeStamp())
-			return;
+	protected void clientInputReceived(Connection c, PlayerInput input) {	
+		world.queueInput(input);
 		
 		ServerPlayer pl = (ServerPlayer)findPlayerByConnection(c);
 		
 		if(pl == null) return;
 		
-		world.pruneHistory(input.getTimestamp());
 		
-		Snapshot snapshot = world.getHistory().peek();
-		pl.addInput(input);
+		long stepMs = (long)(SharedVars.STEP * 1000);
+		Snapshot snapshot = world.findPastSnapshot(input.getTimestamp(), stepMs);
 		
 		if(snapshot != null){			
 			snapshot.addInput(input); //Add the input to the snapshot in which the input happened client side
-			input.setSaved(true);
 			input.setCorrected(true);
-			simulator.simulate(snapshot, Utils.generateTimeStamp(), world.getHistory()); //Simulate a new world based on the client input
+			simulator.simulate(snapshot, world.getTick(), world.getHistory()); //Simulate a new world based on the client input
 			
 			while(simulator.isRunning()){} //Wait for simulation
 			
 			world.snapToSnapshot(simulator.getResult()); //Apply correction
 		}else{
-			Eug.GetInputMapper().get(input.getEvent()).resolve(world, input);	
+			Eug.GetInputMapper().get(input.getEvent()).resolve(world, input, SharedVars.STEP);	
 			input.setCorrected(true);
 		}
 	}
 
 	public void update(){
-		tick++;
-		world.update(SharedVars.STEP);
+		if(simulator.isRunning()){
+			if(simulator.getUptime() > (long)1000){
+				simulator.terminateSimulation();
+				
+				Debug.println("[Instance:update] Simulation timedout after running for 1 second.", Debug.Reporting.Fatal);
+			}
+		}
 		
-		boolean snapshotSent = false;
 		
 		for(Player basePlayer : world.getPlayers()){
 			if(basePlayer.getId() == -1) continue; //Skip server player
@@ -166,14 +162,14 @@ public class Instance {
 							while(iterator.hasNext()){
 								PlayerInput input = iterator.next();
 								if(input.isCorrected()){
-									msg.getSnapshot().addInput(input);
+									if(input.getSnapshot() != msg.getSnapshot())
+										msg.getSnapshot().addInput(input);
 									iterator.remove();
 								}
 							}
 							
 							pl.setLastSnapshotTimestamp(world.getLatestSnapshot().getTimestamp());
 							msg.sendUDP(pl.getConnection());
-							snapshotSent = true;
 						}
 					}
 				}
@@ -185,16 +181,14 @@ public class Instance {
 			}
 		}
 		
-		if(snapshotSent){
-			lastSnapshotSent = world.getLatestSnapshot();
-		}
-		
 		//Remove disconnected players
 		ServerPlayer toRemove = null;
 		while((toRemove = removePlayerQueue.poll()) != null){
 			removePlayer(toRemove);
 		}
 		
+
+		world.update(SharedVars.STEP);
 	}
 	
 	private AbstractEntityState[] getEntityStates(){

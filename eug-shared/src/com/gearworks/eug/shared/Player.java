@@ -75,7 +75,10 @@ public class Player {
 	//Returns true after client is synced and ready to play
 	public boolean isValid(){ return isInstanceValid() && isInitialized() && !isDisconnected(); }
 	public boolean isInstanceValid(){ return isInstanceValidated; }
-	public void setInstanceValid(boolean toggle){ isInstanceValidated = toggle; }
+	public void setInstanceValid(boolean toggle){ 
+		isInstanceValidated = toggle;
+		Debug.println("[Player:setInstanceValid] [" + id + "] " + toggle);
+	}
 	public long getValidationTimestamp(){ return validationTimestamp; }
 	public void setValidationTimestamp(long ts){ validationTimestamp = ts; } 
 	public void dispose(){

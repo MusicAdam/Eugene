@@ -35,10 +35,10 @@ public class EntityState extends AbstractEntityState {
 	public boolean epsilonEquals(AbstractEntityState other) {
 		if(other == null) return false;
 		EntityState state = (EntityState)other;
-		return (position.x + SharedVars.POSITION_TOLERANCE <= state.position.x &&
-				position.x - SharedVars.POSITION_TOLERANCE >= state.position.x &&
-				position.y + SharedVars.POSITION_TOLERANCE <= state.position.y &&
-				position.y - SharedVars.POSITION_TOLERANCE >= state.position.y);
+		return (position.x + SharedVars.POSITION_TOLERANCE >= state.position.x &&
+				position.x - SharedVars.POSITION_TOLERANCE <= state.position.x &&
+				position.y + SharedVars.POSITION_TOLERANCE >= state.position.y &&
+				position.y - SharedVars.POSITION_TOLERANCE <= state.position.y);
 	}
 
 }

@@ -31,10 +31,11 @@ public class PlayerInput extends Message{
 	private Vector2 infoVector;
 	private int instanceId;
 	private int targetPlayerID; //The id of the player who made the input
+	private int tick;
 	
 	private transient boolean corrected; 	//Whether a snapshot containing the corrected state at the time of this input has been recieved yet.
 											//This is transient because it is a local state that does not need to be transmitted to the server/client
-	private transient boolean saved;		//Whether this input has been picked up by a snapshot
+	private transient Snapshot savedTo;		//Snapshot in which this event took place
 											//This is transient because "																"
 	
 	
@@ -46,12 +47,13 @@ public class PlayerInput extends Message{
 		targetPlayerID = -1;
 	}
 	
-	public PlayerInput(int id, int targetPlayerId, Event event, Vector2 infoVector, int key){
+	public PlayerInput(int id, int targetPlayerId, Event event, Vector2 infoVector, int key, int tick){
 		this.timestamp = Utils.generateTimeStamp();
 		this.event = event;
 		this.infoVector = infoVector;
 		this.key = key;
 		this.targetPlayerID = targetPlayerId;
+		this.tick = tick;
 	}
 	
 	public PlayerInput(PlayerInput cpy){
@@ -61,6 +63,7 @@ public class PlayerInput extends Message{
 			this.infoVector = new Vector2(cpy.infoVector.x, cpy.infoVector.y);
 		this.key = cpy.key;
 		this.targetPlayerID = cpy.targetPlayerID;
+		this.tick = cpy.tick;
 	}
 
 	public long getTimestamp(){ return timestamp; }
@@ -83,8 +86,10 @@ public class PlayerInput extends Message{
 	
 	public int getTargetPlayerID(){ return targetPlayerID; }	
 	
-	public void setSaved(boolean toggle){ saved = toggle; }
-	public boolean isSaved(){ return saved; }
+	public Snapshot getSnapshot(){ return savedTo; }
+	public void setSnapshot(Snapshot snap){ savedTo = snap; }
+	public boolean isSaved(){ return savedTo != null; }
 	public void setCorrected(boolean toggle){ corrected = toggle; }
 	public boolean isCorrected(){ return corrected; }
+	public int getTick(){ return tick; }
 }

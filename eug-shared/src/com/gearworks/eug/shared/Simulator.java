@@ -5,6 +5,7 @@ import java.util.List;
 import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
+import com.gearworks.eug.shared.utils.Utils;
 
 /*
  * The simulator takes a snapshot and a history of snapshots and simulates the snapshot forward in time.
@@ -30,46 +31,41 @@ public class Simulator {
 		
 		@Override
 		public void run(){
-			long simTime = snapshot.getTimestamp(); //Start simulation at the time of the snapshot
-			
-			long step = (long)(SharedVars.STEP * 1000); //Convert STEP to miliseconds 		
-			
-			float predicted = (float)(toTime - simTime) / (float)step;
-			
-			synchronized(lock){
-				//Run simulation
-				running = true;
-
-				world.snapToSnapshot(snapshot);
-				
-				while(simTime < toTime && doSim){
-					//If there isn't a full step left, calculate partial step
-					if(simTime + step > toTime)
-						step = toTime - simTime;
-					
-					synchronized(world.historyLock){
-						int inc = 0;
-						try{
-						while(!history.isEmpty() && history.peek(inc).getTimestamp() <= simTime){
-							Snapshot snap = history.peek(inc);
-							for(PlayerInput input : snap.getInput()){
-								Eug.GetInputMapper().get(input.getEvent()).resolve(world, input);
-							}
-							inc++;
-						}
-						}catch (Exception e){
-							throw e;
-						}
-					}
+			try{
+				synchronized(lock){
+					//Run simulation
+					running = true;
 	
-					world.update(SharedVars.STEP);
+					long simTime = snapshot.getTimestamp();
+					float step = SharedVars.STEP;
+										
+					world.snapToSnapshot(snapshot);
 					
-					simTime += step; //Step time forward
+					while(simTime <= toTime && doSim){	
+						if((float)(toTime - simTime) < SharedVars.STEP){
+							step = (float)(toTime - simTime);
+						}
+						
+						synchronized(world.historyLock){
+							int inc = 0;
+							while(!history.isEmpty() && history.peek(inc).getTimestamp() <= simTime){
+								Snapshot snap = history.peek(inc);
+								for(PlayerInput input : snap.getInput()){
+									Eug.GetInputMapper().get(input.getEvent()).resolve(world, input, step);
+								}
+								inc++;
+							}
+						}
+		
+						world.update(step);
+					}
+					
+					snapshot = world.generateSnapshot();
+					snapshot.setTimestamp(toTime);
 				}
-				
-				snapshot = world.generateSnapshot();
-				snapshot.setTimestamp(simTime);		
-				
+			}catch(Exception e){
+				e.printStackTrace();
+			}finally{
 				running = false;
 			}
 		}
@@ -87,6 +83,7 @@ public class Simulator {
 	public Object lock = new Object();
 	private SimulationThread thread;
 	private World world;
+	private long startTime;
 
 	public Simulator(){	
 		world = new World("Sim world", -1, true);
@@ -99,6 +96,14 @@ public class Simulator {
 		
 		thread = new SimulationThread(world, snapshot, toTime, history);
 		thread.start();
+		
+		startTime = Utils.generateTimeStamp();
+	}
+	
+	public long getUptime(){
+		if(!isRunning()) return 0;
+		
+		return (Utils.generateTimeStamp() - startTime);
 	}
 	
 	public boolean isRunning(){

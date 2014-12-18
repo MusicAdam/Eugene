@@ -24,6 +24,7 @@ import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.events.EntityEventListener;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
@@ -36,6 +37,7 @@ import com.gearworks.eug.shared.state.AbstractEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.state.StateManager;
 import com.gearworks.eug.shared.utils.Utils;
+import com.gearworks.eug.shared.utils.Vector2;
 
 public class EugClient extends Eug {	
 	public static final String 	UPDATE_THREAD = "update";
@@ -87,6 +89,7 @@ public class EugClient extends Eug {
 		 * Initialize states		
 		 */
 		world = new World("ClientWorld", -1);
+		world.setRecordHistory(false); //Don't record history until we recieve the server initialization message.
 		sm = new StateManager();
 		sm.setState(new ConnectState()); //Set initial state
 	}
@@ -112,7 +115,7 @@ public class EugClient extends Eug {
 		QueuedMessageWrapper message;
 		while((message = messageQueue.poll()) != null)
 			parseServerMessage(message.connection, message.message);
-			
+		
 		sm.update();
 		
 		while(!spawnQueue.isEmpty())
@@ -257,5 +260,11 @@ public class EugClient extends Eug {
 	@Override 
 	protected List<Player> getPlayers(){
 		return world.getPlayers();
+	}
+	
+	public static PlayerInput GenerateInput(int targetPlayer, PlayerInput.Event event, Vector2 mouse, int key){
+		PlayerInput input = new PlayerInput(-1, targetPlayer, event, mouse, key, Eug.GetWorld().getTick());
+		Eug.GetWorld().queueInput(input);		
+		return input;
 	}
 }

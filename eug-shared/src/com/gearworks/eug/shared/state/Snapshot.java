@@ -19,24 +19,32 @@ public class Snapshot {
 	private AbstractEntityState[] entityStates; //The states for all the entities in the server
 	private PlayerState[] players; //Players who are connected	
 	private PlayerInput[] inputs; //Record of inputs since last snapshot
+	private int tick;
 	
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
 		instanceId = -1;
 		entityStates = null;
+		tick = -1;
 	}
 
-	public Snapshot(int instanceId, PlayerState[] players, AbstractEntityState[] entityStates, PlayerInput[] playerInputs) {
+	public Snapshot(int instanceId, PlayerState[] players, AbstractEntityState[] entityStates, PlayerInput[] playerInputs, int tick) {
 		timestamp = Utils.generateTimeStamp();
 		this.instanceId = instanceId;
 		this.entityStates = entityStates;
 		this.players = players;
 		this.inputs = playerInputs;
+		this.tick = tick;
+		
+		for(PlayerInput input : playerInputs){
+			input.setSnapshot(this);
+		}
 	}
 	
 	public Snapshot(Snapshot cpy){
 		this.timestamp = cpy.timestamp;
 		this.instanceId = cpy.instanceId;
+		this.tick = cpy.tick;
 		
 		if(cpy.entityStates != null){
 			this.entityStates = new AbstractEntityState[cpy.entityStates.length];
@@ -60,6 +68,7 @@ public class Snapshot {
 		}
 	}
 	
+	public int getTick(){ return tick; }
 	public int getInstanceId() { return instanceId;	}
 	public long getTimestamp(){ return timestamp; }
 	public AbstractEntityState[] getEntityStates() { return entityStates; }
@@ -117,7 +126,7 @@ public class Snapshot {
 		
 		inputs[fixedSize - 1] = input;
 		
-		input.setSaved(true);
+		input.setSnapshot(this);
 		
 		this.inputs = inputs;
 	}

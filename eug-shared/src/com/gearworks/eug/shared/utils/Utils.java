@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
 
+import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.NetworkedEntity;
 
 public class Utils {
@@ -162,6 +163,15 @@ public class Utils {
 	
 	public static String timeToString(long time){
 		return new Date(time).toString();
+	}
+	
+	public static boolean timeCompareEpsilon(long time1, long time2, long e){
+		if(	time1 > time2 + e ||
+			time1 < time2 - e){
+			return true;
+		}
+		
+		return false;
 	}
 
 }

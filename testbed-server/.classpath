@@ -5,5 +5,12 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/eug-server"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/eug-shared"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/testbed-shared"/>
+	<classpathentry kind="lib" path="/testbed-shared/lib/lwjgl/jar/lwjgl.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/C:/Users/i55645/Documents/disk/testbed-shared/lib/lwjgl/doc/3rdparty/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="testbed-shared/lib/lwjgl/native/windows/x64"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/testbed-shared/lib/lwjgl/jar/disruptor.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
