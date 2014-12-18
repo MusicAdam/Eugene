@@ -90,14 +90,44 @@ public class Simulator {
 	}
 	
 	//Runs a simulation with the given parameters
-	public void simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
-		//Make copies of the data as it will be changing outside of the simulator
-		snapshot = new Snapshot(snapshot);
+	public Snapshot simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
+		long simTime = snapshot.getTimestamp();
+		float step = SharedVars.STEP;
 		
-		thread = new SimulationThread(world, snapshot, toTime, history);
-		thread.start();
+		for(PlayerState state : snapshot.getPlayers()){
+			if(	state.isDisconnected() ||
+				!state.isInitialized() ||
+				!state.isInstanceValidated())
+				continue;		
+		}
 		
-		startTime = Utils.generateTimeStamp();
+		
+		world.snapToSnapshot(snapshot);
+		
+		while(simTime <= toTime){	
+			if((float)(toTime - simTime) < SharedVars.STEP){
+				step = (float)(toTime - simTime);
+			}
+			
+			synchronized(world.historyLock){
+				int inc = 0;
+				while(!history.isEmpty() && history.peek(inc) != null && history.peek(inc).getTimestamp() <= simTime){
+					Snapshot snap = history.peek(inc);
+					for(PlayerInput input : snap.getInput()){
+						Eug.GetInputMapper().get(input.getEvent()).resolve(world, input, step);
+					}
+					inc++;
+				}
+			}
+
+			world.update(step);
+			simTime += (long)(SharedVars.STEP * 1000);
+		}
+		
+		snapshot = world.generateSnapshot();
+		snapshot.setTimestamp(toTime);
+		
+		return snapshot;
 	}
 	
 	public long getUptime(){

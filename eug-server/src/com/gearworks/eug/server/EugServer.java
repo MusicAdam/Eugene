@@ -286,4 +286,21 @@ public class EugServer extends Eug {
 		}
 		return null;
 	}
+	
+	@Override
+	public void dispose(){
+		for(Instance instance : instances){
+			instance.dispose();
+		}
+		
+		while(!idlePlayers.isEmpty()){
+			Player pl = idlePlayers.poll();
+			pl.dispose();
+		}
+		
+		idlePlayers = null;
+		
+		server.close();
+		server = null;
+	}
 }

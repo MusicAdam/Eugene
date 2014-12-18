@@ -108,20 +108,6 @@ public class GameState implements State {
 			if(simulator == null){
 				simulator = new Simulator();
 			}		
-			Snapshot correctedState = null;
-			if((correctedState = simulator.getResult()) != null &&
-				EugClient.GetPlayer().getInputs().size() == 0){
-				Eug.GetWorld().snapToSnapshot(correctedState);
-			}
-			
-
-			if(simulator.isRunning()){
-				if(simulator.getUptime() > 1000){
-					simulator.terminateSimulation();
-					
-					Debug.println("[GameState:update] Simulation timedout after running for 1 second.", Debug.Reporting.Fatal);
-				}
-			}
 			
 			//Remove init scene message and registry update message if it still needs to be done.
 			if(initializeSceneMessageIndex != -1){
@@ -228,9 +214,7 @@ public class GameState implements State {
 		}		
 
 		updatesSinceLastCorrection = 0;
-		
-		if(simulator.isRunning()) simulator.terminateSimulation(); //Don't care about the old update, we have new data
-		
+				
 		Eug.GetWorld().pruneHistory(msg.getSnapshot().getTimestamp());
 		Snapshot localSnapshot =  	Eug.GetWorld().getHistory().peek();
 		
@@ -249,7 +233,8 @@ public class GameState implements State {
 		}
 						
 		if(!Snapshot.Compare(serverSnapshot, localSnapshot)){	//If the serverSnapshot and the localSnapshot don't match, calculate a corrected state
-			simulator.simulate(serverSnapshot, Eug.GetWorld().getLatestSnapshot().getTimestamp(), Eug.GetWorld().getHistory());
+			Snapshot result = simulator.simulate(serverSnapshot, Eug.GetWorld().getLatestSnapshot().getTimestamp(), Eug.GetWorld().getHistory());
+			Eug.GetWorld().snapToSnapshot(result);
 		}
 	}
 	

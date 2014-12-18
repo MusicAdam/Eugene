@@ -60,7 +60,11 @@ public class Server {
 		} finally {
 			glfwTerminate();
 			errorCallback.release();
+			
+			server.dispose();
 		}
+		
+		System.out.println("Goodbye");
 	}
 	
 	private void init(){
@@ -169,9 +173,6 @@ public class Server {
             
 	        server.update(SharedVars.STEP);    
         }
-        
-		server.dispose();
-		
 	}
 	
 	public static void main(String[] args){

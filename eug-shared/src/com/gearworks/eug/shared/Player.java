@@ -85,6 +85,10 @@ public class Player {
 		for(int i = 0; i < entities.size(); i++){
 			Eug.DestroyEntity(entities.get(i));
 		}
+		
+		isInitialized = false;
+		isDisconnected = true;
+		isInstanceValidated = false;
 	}
 	
 	public void addEntity(NetworkedEntity e){		

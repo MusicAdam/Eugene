@@ -66,6 +66,7 @@ public class NetworkedEntity {
 		throw Eug.Get().new NotImplementedException();	}
 	
 	public void snapToState(AbstractEntityState state){
+		id = state.getId();
 		this.spriteResource = state.getSpriteResource();
 		
 		if(state.getPlayerId() != getPlayer().getId()){

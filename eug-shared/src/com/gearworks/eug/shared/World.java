@@ -290,11 +290,7 @@ public class World {
 		if(Eug.OnMainThread() || simulator){
 			synchronized(entitySpawnLock){
 				if(ent.getPlayer().isValid()){
-					if(simulator){
-						Debug.println("[Simulator:spawn] entity " + ent.getId());
-					}else{
-						Debug.println("[World:spawn] entity " + ent.getId());						
-					}
+					Debug.println("[" + name + "]:spawn] entity " + ent.getId());		
 					ent.spawn(this);
 					entityMap.put(ent.getId(), ent);
 					lastEntityID = ent.getId();
@@ -305,7 +301,7 @@ public class World {
 					
 					return ent;
 				}else{
-					Debug.println("[World:spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getPlayer().getId() + "] is invalid.", Debug.Reporting.Warning);
+					Debug.println("[" + name + "]:spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getPlayer().getId() + "] is invalid.", Debug.Reporting.Warning);
 				}
 			}
 		}else{
@@ -328,12 +324,12 @@ public class World {
 					listener.onDestroy(ent);
 				}
 				
-				Debug.println("[World:destroy] Entity " + ent.getId() + " deleted");
+				Debug.println("[" + name + "]:destroy] Entity " + ent.getId() + " deleted");
 			}
 		}else{
 			synchronized(entityDeleteLock){
 				entityDeleteQueue.add(ent);
-				Debug.println("[World:destroy] Entity " + ent.getId() + " queued for deletion");
+				Debug.println("[" + name + "]:destroy] Entity " + ent.getId() + " queued for deletion");
 			}
 		}
 	}
@@ -348,7 +344,7 @@ public class World {
 						listener.AddedToWorld(pl);
 					}
 					
-					Debug.println("[World:addPlayer] Player " + pl.getId() + " added");
+					Debug.println("[" + name + "]:addPlayer] Player " + pl.getId() + " added");
 				}
 				
 				return pl;
@@ -371,7 +367,7 @@ public class World {
 						listener.RemovedFromWorld(pl);
 					}
 					
-					Debug.println("[World:removePlayer] Player " + pl.getId() + " removed");
+					Debug.println("[" + name + "]:removePlayer] Player " + pl.getId() + " removed");
 					return true;
 				}
 				
@@ -527,5 +523,14 @@ public class World {
 
 	public void queueInput(PlayerInput input) {
 		inputQueue.add(input);		
+	}
+	
+	public void dispose(){
+		for(Player pl : players){
+			pl.dispose();
+		}
+		
+		players.clear();
+		entityMap.clear();
 	}
 }

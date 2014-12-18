@@ -109,11 +109,9 @@ public class Instance {
 		if(snapshot != null){			
 			snapshot.addInput(input); //Add the input to the snapshot in which the input happened client side
 			input.setCorrected(true);
-			simulator.simulate(snapshot, world.getTick(), world.getHistory()); //Simulate a new world based on the client input
+			Snapshot result = simulator.simulate(snapshot, world.getTick(), world.getHistory()); //Simulate a new world based on the client input
 			
-			while(simulator.isRunning()){} //Wait for simulation
-			
-			world.snapToSnapshot(simulator.getResult()); //Apply correction
+			world.snapToSnapshot(result); //Apply correction
 		}else{
 			Eug.GetInputMapper().get(input.getEvent()).resolve(world, input, SharedVars.STEP);	
 			input.setCorrected(true);
@@ -272,5 +270,9 @@ public class Instance {
 
 	public ServerPlayer findPlayerById(int id) {
 		return (ServerPlayer)world.getPlayer(id);
+	}
+	
+	public void dispose(){
+		world.dispose();
 	}
 }
