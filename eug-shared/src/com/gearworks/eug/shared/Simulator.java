@@ -86,18 +86,19 @@ public class Simulator {
 	private long startTime;
 
 	public Simulator(){	
-		world = new World("Sim world", -1, true);
 	}
 	
 	//Runs a simulation with the given parameters
 	public Snapshot simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
+		world = new World("Sim world", -1, true); //Initialize a world
+		
 		long simTime = snapshot.getTimestamp();
 		float step = SharedVars.STEP;
 		
 		for(PlayerState state : snapshot.getPlayers()){
 			if(	state.isDisconnected() ||
 				!state.isInitialized() ||
-				!state.isInstanceValidated())
+				!state.isInstanceValid())
 				continue;		
 		}
 		
@@ -110,17 +111,16 @@ public class Simulator {
 			}
 			
 			synchronized(world.historyLock){
-				int inc = 0;
-				while(!history.isEmpty() && history.peek(inc) != null && history.peek(inc).getTimestamp() <= simTime){
-					Snapshot snap = history.peek(inc);
+				while(!history.isEmpty() && history.peek().getTimestamp() <= simTime){
+					Snapshot snap = history.pop();
 					for(PlayerInput input : snap.getInput()){
 						Eug.GetInputMapper().get(input.getEvent()).resolve(world, input, step);
 					}
-					inc++;
 				}
 			}
 
-			world.update(step);
+			world.update(step);			
+
 			simTime += (long)(SharedVars.STEP * 1000);
 		}
 		

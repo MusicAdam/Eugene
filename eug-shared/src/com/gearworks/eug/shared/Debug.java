@@ -6,6 +6,8 @@ import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import com.gearworks.eug.shared.utils.Utils;
+
 /*
  * Includes debug functionality for client/server
  */
@@ -22,6 +24,9 @@ public class Debug {
 	public static void println(String msg){ println(msg, Reporting.Verbose); } //Verbose by default
 	public static void println(String msg, Reporting level){
 		if(!shouldReport(level)) return;
+		
+		if(SharedVars.DEBUG_PRINT_TIME)
+			msg = "[" + Utils.timeToString(Utils.generateTimeStamp()) + "] " + msg;
 		
 		System.out.println(msg);
 	}

@@ -97,7 +97,9 @@ public class Instance {
 	
 	protected void clientInputReceived(Connection c, PlayerInput input) {	
 		world.queueInput(input);
+		input.setCorrected(true);
 		
+		/*
 		ServerPlayer pl = (ServerPlayer)findPlayerByConnection(c);
 		
 		if(pl == null) return;
@@ -107,15 +109,18 @@ public class Instance {
 		Snapshot snapshot = world.findPastSnapshot(input.getTimestamp(), stepMs);
 		
 		if(snapshot != null){			
+			if(!Utils.timeCompareEpsilon(snapshot.getTimestamp(), input.getTimestamp(), stepMs))
+				System.out.println("SOMETHING BAD");
+			
 			snapshot.addInput(input); //Add the input to the snapshot in which the input happened client side
 			input.setCorrected(true);
-			Snapshot result = simulator.simulate(snapshot, world.getTick(), world.getHistory()); //Simulate a new world based on the client input
+			Snapshot result = simulator.simulate(snapshot, Utils.generateTimeStamp(), world.getHistory()); //Simulate a new world based on the client input
 			
 			world.snapToSnapshot(result); //Apply correction
 		}else{
 			Eug.GetInputMapper().get(input.getEvent()).resolve(world, input, SharedVars.STEP);	
 			input.setCorrected(true);
-		}
+		}*/
 	}
 
 	public void update(){
@@ -166,8 +171,19 @@ public class Instance {
 								}
 							}
 							
+							final Player spl = pl;
 							pl.setLastSnapshotTimestamp(world.getLatestSnapshot().getTimestamp());
-							msg.sendUDP(pl.getConnection());
+							new Thread(){
+								@Override
+								public void run(){
+									try {
+										Thread.sleep(90);
+									} catch (InterruptedException e) {
+										e.printStackTrace();
+									}
+									msg.sendUDP(spl.getConnection());
+								}
+							}.start();
 						}
 					}
 				}

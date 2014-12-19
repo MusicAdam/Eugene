@@ -50,6 +50,7 @@ public class EntityManager {
 		} catch (IllegalArgumentException e) {
 			throw new EntityBuildException(e.getMessage());
 		} catch (InvocationTargetException e) {
+			e.getTargetException().printStackTrace();
 			throw new EntityBuildException(e.getMessage());
 		}		
 	}

@@ -9,7 +9,7 @@ import com.gearworks.eug.shared.utils.Utils;
 public class Message {
 	private long sentTime;
 	private long receivedTime;
-	protected int inheritanceLevel = 0; //If set > 0 will be used to invoke parseMessage on a parent class instead.
+	protected int inheritanceLevel = 0; //If set > 0 will be used to invoke parseMessage on a child class instead.
 	
 	public void sendUDP(Connection c){
 		this.sentTime = Utils.generateTimeStamp();

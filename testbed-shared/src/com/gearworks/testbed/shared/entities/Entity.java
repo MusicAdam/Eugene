@@ -1,6 +1,8 @@
 package com.gearworks.testbed.shared.entities;
 
 import org.lwjgl.opengl.GL11;
+import java.awt.Font;
+import org.newdawn.slick.TrueTypeFont;
 
 import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
@@ -12,6 +14,7 @@ import com.gearworks.eug.shared.utils.Vector2;
 
 
 public class Entity extends NetworkedEntity {
+	public TrueTypeFont font;
 	public static final short ENTITY = 0x0001;
 	
 	public static final int WIDTH = 30;
@@ -26,10 +29,13 @@ public class Entity extends NetworkedEntity {
 	public Entity(short id, Player player) {
 		super(id, player);
 		position = new Vector2(0, 0);
+		font = new TrueTypeFont(new Font("Times New Roman", Font.PLAIN, 12), false);
+		
 	}
 	
 	@Override
 	public void render(){
+		
 		GL11.glColor3f(1f,0,0f);
 		
 		GL11.glBegin(GL11.GL_QUADS);
@@ -38,6 +44,8 @@ public class Entity extends NetworkedEntity {
 		    GL11.glVertex2f(position.x + WIDTH,position.y+HEIGHT);
 		    GL11.glVertex2f(position.x, position.y+HEIGHT);
 		GL11.glEnd();
+		
+		font.drawString(position.x, position.y, "(" + position.x + ", " + position.y + ")");
 	}
 	
 	@Override

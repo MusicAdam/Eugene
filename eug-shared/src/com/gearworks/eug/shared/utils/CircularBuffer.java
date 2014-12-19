@@ -57,6 +57,12 @@ public class CircularBuffer<T> {
 		}		
 	}
 	
+	public void set(T val, int offset){
+		synchronized(lock){
+			data[(head + offset)%data.length] = val;
+		}
+	}
+	
 	public T peekTail(){
 		synchronized(lock){
 			if(isEmpty()) return null;

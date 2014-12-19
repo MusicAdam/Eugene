@@ -13,7 +13,7 @@ public class PlayerState {
 	private long	validationTimestamp; 	//Last time AssignInstanceMessage was sent
 	private boolean isInitialized = false;			//True when the initial snapshot has been successfully sent to the player
 	private boolean isDisconnected = false; //When true player will be removed from idle players/instances
-	private boolean isInstanceValidated;
+	private boolean isInstanceValid;
 	
 	public PlayerState(){
 		//For Serialization
@@ -26,7 +26,7 @@ public class PlayerState {
 		this.isInitialized = isInitialized;
 		this.isDisconnected = isDisconnected;
 		this.isInitialized = isInitialized;
-		this.isInstanceValidated = isInstanceValidated;
+		this.isInstanceValid = isInstanceValidated;
 	}
 	
 	public PlayerState(PlayerState cpy){
@@ -35,7 +35,7 @@ public class PlayerState {
 		this.validationTimestamp = cpy.validationTimestamp;
 		this.isInitialized = cpy.isInitialized;
 		this.isDisconnected = cpy.isDisconnected;
-		this.isInstanceValidated = cpy.isInstanceValidated;
+		this.isInstanceValid = cpy.isInstanceValid;
 	}
 	
 	public int getInstanceId() {
@@ -58,8 +58,8 @@ public class PlayerState {
 		return isDisconnected;
 	}
 	
-	public boolean isInstanceValidated(){
-		return isInstanceValidated;
+	public boolean isInstanceValid(){
+		return isInstanceValid;
 	}
 
 	
@@ -75,7 +75,7 @@ public class PlayerState {
 				validationTimestamp == otherPlayer.validationTimestamp &&
 				isInitialized == otherPlayer.isInitialized &&
 				isDisconnected == otherPlayer.isDisconnected && 
-				isInstanceValidated == otherPlayer.isInstanceValidated);
+				isInstanceValid == otherPlayer.isInstanceValid);
 	}
 	
 	@Override
@@ -85,7 +85,7 @@ public class PlayerState {
 		hash = hash * 31 + instanceId;
 		hash = hash * 31 + ((isInitialized) ? 1 : 0);
 		hash = hash * 31 + ((isDisconnected) ? 1 : 0);
-		hash = hash * 31 + ((isInstanceValidated) ? 1 : 0);
+		hash = hash * 31 + ((isInstanceValid) ? 1 : 0);
 
 		return hash;
 	}

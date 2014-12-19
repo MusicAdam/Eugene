@@ -16,9 +16,7 @@ public class KeyResolver implements InputResolver {
 		
 		if(pl == null)
 			return null;
-		
-		pl.addInput(input);
-		
+				
 		float speed = 100;
 		
 		if(GLFW_KEY_D == input.getKey()){

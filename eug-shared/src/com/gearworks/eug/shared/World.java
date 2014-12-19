@@ -106,10 +106,22 @@ public class World {
 			//
 			//Process player input
 			while(!inputQueue.isEmpty()){
-				PlayerInput input = inputQueue.poll();
-				Player pl = Eug.GetInputMapper().get(input.getEvent()).resolve(this, input, step);
+				final PlayerInput input = inputQueue.poll();
+				final Player pl = Eug.GetInputMapper().get(input.getEvent()).resolve(this, input, step);
+				pl.addInput(input);
 				
-				input.sendUDP(pl.getConnection());
+				
+				new Thread(){
+					@Override
+					public void run(){
+						try {
+							Thread.sleep(90);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						input.sendUDP(pl.getConnection());
+					}
+				}.start();
 			}
 					
 			if(!simulator && recordHistory){
@@ -194,7 +206,7 @@ public class World {
 		}
 		
 		for(int deletedPlayerId : deletedPlayers){
-			Player pl = Eug.FindPlayerById(deletedPlayerId);
+			Player pl = getPlayer(deletedPlayerId);
 
 			if(pl  != null){
 				pl.dispose();
@@ -290,7 +302,7 @@ public class World {
 		if(Eug.OnMainThread() || simulator){
 			synchronized(entitySpawnLock){
 				if(ent.getPlayer().isValid()){
-					Debug.println("[" + name + "]:spawn] entity " + ent.getId());		
+					Debug.println("[" + name + ":spawn] entity " + ent.getId());		
 					ent.spawn(this);
 					entityMap.put(ent.getId(), ent);
 					lastEntityID = ent.getId();
@@ -301,7 +313,7 @@ public class World {
 					
 					return ent;
 				}else{
-					Debug.println("[" + name + "]:spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getPlayer().getId() + "] is invalid.", Debug.Reporting.Warning);
+					Debug.println("[" + name + ":spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getPlayer().getId() + "] is invalid.", Debug.Reporting.Warning);
 				}
 			}
 		}else{
@@ -324,12 +336,12 @@ public class World {
 					listener.onDestroy(ent);
 				}
 				
-				Debug.println("[" + name + "]:destroy] Entity " + ent.getId() + " deleted");
+				Debug.println("[" + name + ":destroy] Entity " + ent.getId() + " deleted");
 			}
 		}else{
 			synchronized(entityDeleteLock){
 				entityDeleteQueue.add(ent);
-				Debug.println("[" + name + "]:destroy] Entity " + ent.getId() + " queued for deletion");
+				Debug.println("[" + name + ":destroy] Entity " + ent.getId() + " queued for deletion");
 			}
 		}
 	}
@@ -344,7 +356,7 @@ public class World {
 						listener.AddedToWorld(pl);
 					}
 					
-					Debug.println("[" + name + "]:addPlayer] Player " + pl.getId() + " added");
+					Debug.println("[" + name + ":addPlayer] Player " + pl.getId() + " added");
 				}
 				
 				return pl;
@@ -367,7 +379,7 @@ public class World {
 						listener.RemovedFromWorld(pl);
 					}
 					
-					Debug.println("[" + name + "]:removePlayer] Player " + pl.getId() + " removed");
+					Debug.println("[" + name + ":removePlayer] Player " + pl.getId() + " removed");
 					return true;
 				}
 				

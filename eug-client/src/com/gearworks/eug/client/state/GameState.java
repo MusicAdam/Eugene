@@ -175,8 +175,11 @@ public class GameState implements State {
 	
 	protected void serverUpdate(UpdateMessage msg) {
 		if(!EugClient.GetPlayer().isValid()) return;
-				
+		
 		Snapshot serverSnapshot = msg.getSnapshot();
+		
+		Eug.GetWorld().synchronizeSnapshot(serverSnapshot);
+		if(true)return ;
 		
 		//System.out.println("[serverUpdate] Server at tick " + serverSnapshot.getTick() + ", client at " + Eug.GetWorld().getTick());
 		

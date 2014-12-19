@@ -29,7 +29,7 @@ public class Player {
 		this.validationTimestamp = state.getValidationTimestamp();
 		this.isInitialized = state.isInitialized();
 		this.isDisconnected = state.isDisconnected();
-		this.isInstanceValidated = state.isInstanceValidated();
+		this.isInstanceValidated = state.isInstanceValid();
 		entities = new ArrayList<NetworkedEntity>();
 		inputs = new ArrayList<PlayerInput>();
 	}
@@ -151,6 +151,9 @@ public class Player {
 			setDisconnected(plState.isDisconnected());
 		if(getValidationTimestamp() != plState.getValidationTimestamp())
 			setValidationTimestamp(plState.getValidationTimestamp());
+		if(isInstanceValid() != plState.isInstanceValid()){
+			setInstanceValid(plState.isInstanceValid());
+		}
 	}
 	
 	public void setLastSnapshotTimestamp(long ts){ lastSnapshotTimestamp = ts; }
