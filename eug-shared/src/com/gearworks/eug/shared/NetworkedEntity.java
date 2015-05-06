@@ -6,46 +6,33 @@ import com.gearworks.eug.shared.state.AbstractEntityState;
 public class NetworkedEntity {	
 	public static final short NETWORKED_ENTITIY = 0x0000;
 	
-	public static final int COLLISION_NONE = 0;
-	public static final int COLLISION_UNIT = 1;
-	public static final int COLLISION_WALL = 2;
-	
 	protected short 		id;
-	protected Player player;
-	protected String 	spriteResource; //Name of the file from which the sprite's texture was loaded
-	private short type;
+	protected Player 		owner; //The player who owns this entity. Null if it is a world entity (no owner).
+	protected String 		spriteResource; //Name of the file from which the sprite's texture was loaded
+	private short 			type;
 	private AbstractEntityState snapToState; //Used to snap to a state from another thread.
-	private World world; //The world in which this entity was spawned.
 	
-	public NetworkedEntity(short id, Player player){
-		this.id = id;
-
+	public NetworkedEntity(short id){
+		this.id = id;		
 		type = EntityManager.GetEntityType(this);
-		setPlayer(player);
 	}
 	
-	public Player getPlayer(){
-		return player;
+	public Player getOwner(){
+		return owner;
 	}
 	
-	public void setPlayer(Player player){
-		if(this.player == player) return;
+	public void setOwner(Player player){
+		if(this.owner == player) return;
 		
-		if(this.player != null)
-			this.player.removeEntity(this);
+		if(this.owner != null)
+			this.owner.removeEntity(this);
 		
-		this.player = player;
+		this.owner = player;
 		
-		if(this.player != null)
-			this.player.addEntity(this);
+		if(this.owner != null)
+			this.owner.addEntity(this);
 	}
-	
-	public int getInstanceId(){
-		return player.getInstanceId();
-	}
-	
-	
-	
+		
 	public void update(){		
 		if(snapToState != null){
 			snapToState(snapToState);
@@ -55,11 +42,7 @@ public class NetworkedEntity {
 	
 	public void dispose()
 	{
-		setPlayer(null);
-	}
-	
-	public void spawn(World world){
-		this.world = world;
+		setOwner(null);
 	}
 	
 	public AbstractEntityState getState() throws NotImplementedException{		
@@ -69,11 +52,11 @@ public class NetworkedEntity {
 		id = state.getId();
 		this.spriteResource = state.getSpriteResource();
 		
-		if(state.getPlayerId() != getPlayer().getId()){
-			Player newPlayer = getWorld().getPlayer(state.getPlayerId());
+		if(state.getPlayerId() != getOwner().getId()){
+			Player newPlayer = Eug.GetWorld().getPlayer(state.getPlayerId());
 			
 			if(newPlayer != null){
-				setPlayer(newPlayer);
+				setOwner(newPlayer);
 			}
 		}
 	}
@@ -85,7 +68,6 @@ public class NetworkedEntity {
 		this.spriteResource = resource;
 	}	
 	public short getType(){ return this.type; }
-	public World getWorld(){ return world; }
 	
 	public void render(){}
 }

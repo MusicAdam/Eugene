@@ -10,8 +10,8 @@ import com.gearworks.eug.shared.utils.Utils;
 public abstract class AbstractEntityState {	
 	protected long timestamp;			//The time at which the state was generated
 	protected short id;					//Id of the entity
-	protected int playerId;			//Id of the player
-	protected short type;		//Type of the entity
+	protected int playerId;				//Id of the player
+	protected short type;				//Type of the entity
 	protected String spriteResource;	//Name of the texture for the sprite. null if none exists
 	
 	public AbstractEntityState(){
@@ -24,7 +24,7 @@ public abstract class AbstractEntityState {
 	public AbstractEntityState(NetworkedEntity ent) {		
 		this.timestamp = Utils.generateTimeStamp();
 		this.id = ent.getId();
-		this.playerId = ent.getPlayer().getId();		
+		this.playerId = ent.getOwner().getId();		
 		this.spriteResource = ent.getSpriteResource();
 		this.type = ent.getType();	
 	}

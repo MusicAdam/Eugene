@@ -27,7 +27,6 @@ public class World {
 	ArrayList<Player> 		 				players = new ArrayList<Player>();
 	CircularBuffer<Snapshot>				history;
 	Snapshot 								latestSnapshot;
-	int										instanceId;
 	int										tick;
 	short									lastEntityID; //The last entity to be added to the world.
 	boolean 								recordHistory; //Should snapshots be saved?
@@ -56,11 +55,11 @@ public class World {
 	private long frame_time = Utils.generateTimeStamp();
 	private int frames = 0;
 	
-	public World(String name, int instanceId){
-		this(name, instanceId, false);
+	public World(String name){
+		this(name, false);
 	}
 	
-	public World(String name, int instanceId, boolean sim){
+	public World(String name, boolean sim){
 		if(!sim)
 			history = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
 		this.name = name;
@@ -225,7 +224,7 @@ public class World {
 		for(Short id : newEntityIds){
 			AbstractEntityState state = snapshot.getEntityState(id);
 			try {
-				if(EntityManager.Build(getPlayer(state.getPlayerId()), state.getType(), this, state)==null)
+				if(EntityManager.Build(getPlayer(state.getPlayerId()), state.getType(), state)==null)
 					throw new EntityBuildException("Unable to build entity, entity returned null");
 			} catch (EntityNotRegisteredException | EntityBuildException e) {
 				e.printStackTrace();
@@ -301,9 +300,8 @@ public class World {
 	public NetworkedEntity spawn(NetworkedEntity ent){
 		if(Eug.OnMainThread() || simulator){
 			synchronized(entitySpawnLock){
-				if(ent.getPlayer().isValid()){
+				if(ent.getOwner().isValid()){
 					Debug.println("[" + name + ":spawn] entity " + ent.getId());		
-					ent.spawn(this);
 					entityMap.put(ent.getId(), ent);
 					lastEntityID = ent.getId();
 					
@@ -313,7 +311,7 @@ public class World {
 					
 					return ent;
 				}else{
-					Debug.println("[" + name + ":spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getPlayer().getId() + "] is invalid.", Debug.Reporting.Warning);
+					Debug.println("[" + name + ":spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getOwner().getId() + "] is invalid.", Debug.Reporting.Warning);
 				}
 			}
 		}else{
@@ -413,7 +411,7 @@ public class World {
 		PlayerInput[] inputsArray = new PlayerInput[inputsList.size()];
 		inputsList.toArray(inputsArray);
 		
-		return new Snapshot(instanceId, playerStates, getEntityStates(), inputsArray, getTick());
+		return new Snapshot(playerStates, getEntityStates(), inputsArray, getTick());
 	}
 	
 	public AbstractEntityState[] getEntityStates() {
@@ -473,7 +471,6 @@ public class World {
 	public CircularBuffer<Snapshot> getHistory(){ return history; }
 	
 	public Snapshot getLatestSnapshot(){ return latestSnapshot; }
-	public void setInstanceId(int id){ instanceId = id; }
 
 	public EntityEventListener addEntityListener(EntityEventListener entityEventListener) {
 		entityEventListeners.add(entityEventListener);

@@ -26,7 +26,6 @@ public class MessageRegistry {
 		kryo.register(EntityCreatedMessage.class);
 		kryo.register(EntityDestroyedMessage.class);
 		kryo.register(UpdateMessage.class);
-		kryo.register(AssignInstanceMessage.class);
 		kryo.register(AbstractEntityState.class);
 		kryo.register(AbstractEntityState[].class);
 		kryo.register(Snapshot.class);

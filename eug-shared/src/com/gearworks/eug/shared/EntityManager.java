@@ -20,8 +20,8 @@ public class EntityManager {
 	}
 	
 	//Instantiates an entity and adds it to the world.
-	public static NetworkedEntity Build(Player player, Short type, World world, AbstractEntityState state) throws EntityNotRegisteredException, EntityBuildException{
-		if(world.getEntities().size() >= SharedVars.MAX_ENTITIES)
+	public static NetworkedEntity Build(Player player, Short type, AbstractEntityState state) throws EntityNotRegisteredException, EntityBuildException{
+		if(Eug.GetWorld().getEntities().size() >= SharedVars.MAX_ENTITIES)
 			throw new EntityBuildException("Cannot build new entity: Max entities reached.");
 		
 		NetworkedEntity ent = null;
@@ -31,14 +31,15 @@ public class EntityManager {
 			throw new EntityNotRegisteredException(type.toString());
 		
 		try {
-			Constructor ctor = klass.getConstructor(new Class[]{short.class, Player.class});
-			ent = (NetworkedEntity)ctor.newInstance(world.nextEntityID(), player);
+			Constructor ctor = klass.getConstructor(new Class[]{short.class});
+			ent = (NetworkedEntity)ctor.newInstance(Eug.GetWorld().nextEntityID());
+			ent.setOwner(player);
 			
 			if(state != null){
 				ent.snapToState(state);
 			}
 			
-			return world.spawn(ent);
+			return Eug.GetWorld().spawn(ent);
 		} catch (NoSuchMethodException e) {
 			throw new EntityBuildException("No valid constructor found for Entity of type " + type);
 		}catch(SecurityException e){
@@ -55,8 +56,8 @@ public class EntityManager {
 		}		
 	}
 	
-	public static NetworkedEntity Build(Player player, Short type, World world) throws EntityNotRegisteredException, EntityBuildException{
-		return Build(player, type, world, null);
+	public static NetworkedEntity Build(Player player, Short type) throws EntityNotRegisteredException, EntityBuildException{
+		return Build(player, type, null);
 	}
 	
 	public static Short GetEntityType(NetworkedEntity ent){

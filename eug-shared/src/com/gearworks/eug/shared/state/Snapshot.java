@@ -14,7 +14,6 @@ import com.gearworks.eug.shared.utils.Utils;
  * A snapshot contains all the information related to the state of game entities at the time given.
  */
 public class Snapshot {
-	private int instanceId; //Server instance to which this snapshot is referring
 	private long timestamp;
 	private AbstractEntityState[] entityStates; //The states for all the entities in the server
 	private PlayerState[] players; //Players who are connected	
@@ -23,14 +22,12 @@ public class Snapshot {
 	
 	public Snapshot(){
 		timestamp = Utils.generateTimeStamp();
-		instanceId = -1;
 		entityStates = null;
 		tick = -1;
 	}
 
-	public Snapshot(int instanceId, PlayerState[] players, AbstractEntityState[] entityStates, PlayerInput[] playerInputs, int tick) {
+	public Snapshot(PlayerState[] players, AbstractEntityState[] entityStates, PlayerInput[] playerInputs, int tick) {
 		timestamp = Utils.generateTimeStamp();
-		this.instanceId = instanceId;
 		this.entityStates = entityStates;
 		this.players = players;
 		this.inputs = playerInputs;
@@ -43,7 +40,6 @@ public class Snapshot {
 	
 	public Snapshot(Snapshot cpy){
 		this.timestamp = cpy.timestamp;
-		this.instanceId = cpy.instanceId;
 		this.tick = cpy.tick;
 		
 		if(cpy.entityStates != null){
@@ -69,7 +65,6 @@ public class Snapshot {
 	}
 	
 	public int getTick(){ return tick; }
-	public int getInstanceId() { return instanceId;	}
 	public long getTimestamp(){ return timestamp; }
 	public AbstractEntityState[] getEntityStates() { return entityStates; }
 

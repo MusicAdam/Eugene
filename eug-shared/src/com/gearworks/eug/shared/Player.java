@@ -7,7 +7,7 @@ import com.gearworks.eug.shared.input.PlayerInput;
 
 public class Player {		
 	private int 	instanceId;			//Reference to instance this player belongs to 
-	private int 	id; 			//id associated with player's connection to the server
+	private int 	id; 				//id associated with player's connection to the server
 	private long	validationTimestamp; 	//Last time AssignInstanceMessage was sent
 	private long	lastSnapshotTimestamp; //The last time the player received as snapshot clientside or was sent a snapshot serverside (not included in player state as it is different client/server side
 	private boolean isInitialized = false;			//True when the initial snapshot has been successfully sent to the player
@@ -94,11 +94,11 @@ public class Player {
 	public void addEntity(NetworkedEntity e){		
 		if(!isValid()) return;
 		
-		if(e.getPlayer() != null && e.getPlayer() != this){
-			e.getPlayer().removeEntity(e);
+		if(e.getOwner() != null && e.getOwner() != this){
+			e.getOwner().removeEntity(e);
 		}
 		
-		e.setPlayer(this);
+		e.setOwner(this);
 		
 		entities.add(e);
 		
@@ -107,7 +107,7 @@ public class Player {
 	
 	public void removeEntity(NetworkedEntity e){
 		if(entities.remove(e)){
-			e.setPlayer(null);
+			e.setOwner(null);
 		}
 	}
 	

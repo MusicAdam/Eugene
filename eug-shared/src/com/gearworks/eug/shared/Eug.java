@@ -158,6 +158,25 @@ public class Eug {
 		}
 	}
 	
+	protected NetworkedEntity spawn(NetworkedEntity ent) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static NetworkedEntity Spawn(NetworkedEntity ent){
+		try {
+			return Get().spawn(ent);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	protected void destroy(NetworkedEntity ent) throws NotImplementedException{ throw new NotImplementedException(); }
+	public static void Destroy(NetworkedEntity ent){
+		try {
+			Get().destroy(ent);
+		} catch (NotImplementedException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public static PlayerEventListener AddPlayerListener(PlayerEventListener playerEventListener){
 		Get().playerEventListeners.add(playerEventListener);
 		return playerEventListener;

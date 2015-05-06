@@ -13,7 +13,6 @@ import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.Simulator;
 import com.gearworks.eug.shared.events.EntityEventListener;
 import com.gearworks.eug.shared.input.PlayerInput;
-import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageCallback;
@@ -38,7 +37,6 @@ public class GameState implements State {
 	public static float ROTATION_SMOOTHING_MINIMUM = .1f; //Minimum delta which will be smoothed
 	
 	private Simulator simulator;
-	private int assignInstanceMessageIndex = -1;
 	private int initializeSceneMessageIndex = -1;
 	private int serverUpdateMessageIndex = -1;
 	private int playerInputMessageIndex = -1;
@@ -65,15 +63,6 @@ public class GameState implements State {
 	public void onEnter() {
 		Debug.println("[GameState: onEnter()]");
 		startTime = Utils.generateTimeStamp();
-		
-		//Register assigninstancemessage to wait for our instance to be assigned.
-		assignInstanceMessageIndex = EugClient.GetMessageRegistry().listen(AssignInstanceMessage.class, new MessageCallback(){
-			@Override
-			public void messageReceived(Connection c, Message msg){
-				AssignInstanceMessage aMsg = (AssignInstanceMessage)msg;
-				EugClient.SetInstance(aMsg.getInstanceId());
-			}
-		});		
 	}
 
 	@Override
@@ -86,8 +75,6 @@ public class GameState implements State {
 		//Cleanup all our callbacks/listeners
 		Eug.GetWorld().removeEntityListener(entityEventListener);
 		
-		if(assignInstanceMessageIndex != -1)
-			EugClient.GetMessageRegistry().remove(assignInstanceMessageIndex);
 		if(initializeSceneMessageIndex != -1)
 			EugClient.GetMessageRegistry().remove(initializeSceneMessageIndex);
 		if(serverUpdateMessageIndex != -1)
@@ -131,19 +118,13 @@ public class GameState implements State {
 						});
 			}
 		}else if(EugClient.GetPlayer().isInstanceValid() && !EugClient.GetPlayer().isInitialized()){
-			//Remove the assigninstancemessage callback if it still exists & create sceneinitialize listener
-			if(assignInstanceMessageIndex != -1){
-				EugClient.GetMessageRegistry().remove(assignInstanceMessageIndex);
-				assignInstanceMessageIndex = -1;
-				
-				final GameState thisRef = this; 
-				initializeSceneMessageIndex = EugClient.GetMessageRegistry().listen(InitializeSceneMessage.class, new MessageCallback(){
-					@Override
-					public void messageReceived(Connection c, Message msg){
-						thisRef.initializeScene(c, (InitializeSceneMessage)msg);
-					}
-				});
-			}
+			final GameState thisRef = this; 
+			initializeSceneMessageIndex = EugClient.GetMessageRegistry().listen(InitializeSceneMessage.class, new MessageCallback(){
+				@Override
+				public void messageReceived(Connection c, Message msg){
+					thisRef.initializeScene(c, (InitializeSceneMessage)msg);
+				}
+			});
 		}
 		
 		frameTimeSum += (Utils.generateTimeStamp() - frameStart);

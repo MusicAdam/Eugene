@@ -9,5 +9,4 @@ public class PlayerEventListener {
 	public void Disconnected(int id){}
 	public void AddedToWorld(Player player){}
 	public void RemovedFromWorld(Player player){}
-	public void Validated(Player player){}
 }

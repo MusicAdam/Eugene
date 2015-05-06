@@ -25,7 +25,6 @@ import com.gearworks.eug.shared.events.EntityEventListener;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
 import com.gearworks.eug.shared.input.PlayerInput;
-import com.gearworks.eug.shared.messages.AssignInstanceMessage;
 import com.gearworks.eug.shared.messages.EntityCreatedMessage;
 import com.gearworks.eug.shared.messages.InitializeSceneMessage;
 import com.gearworks.eug.shared.messages.Message;
@@ -88,19 +87,10 @@ public class EugClient extends Eug {
 		/*
 		 * Initialize states		
 		 */
-		world = new World("ClientWorld", -1);
+		world = new World("ClientWorld");
 		world.setRecordHistory(false); //Don't record history until we recieve the server initialization message.
 		sm = new StateManager();
 		sm.setState(new ConnectState()); //Set initial state
-	}
-	
-	public static void SetInstance(int instanceId) {
-		EugClient.GetPlayer().setInstanceId(instanceId);
-		Eug.GetWorld().setInstanceId(instanceId);
-		EugClient.GetPlayer().setInstanceValid(true);
-		AssignInstanceMessage msg= new AssignInstanceMessage(instanceId, GetPlayer().getId());
-		GetPlayer().getConnection().sendUDP(msg);
-		Debug.println("[EugClient:SetInstance] Instance set to " + instanceId);
 	}
 
 	@Override
