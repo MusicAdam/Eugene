@@ -15,7 +15,7 @@ import com.gearworks.eug.shared.utils.Utils;
  */
 public class Snapshot {
 	private long timestamp;
-	private AbstractEntityState[] entityStates; //The states for all the entities in the server
+	private NetworkedEntityState[] entityStates; //The states for all the entities in the server
 	private PlayerState[] players; //Players who are connected	
 	private PlayerInput[] inputs; //Record of inputs since last snapshot
 	private int tick;
@@ -26,7 +26,7 @@ public class Snapshot {
 		tick = -1;
 	}
 
-	public Snapshot(PlayerState[] players, AbstractEntityState[] entityStates, PlayerInput[] playerInputs, int tick) {
+	public Snapshot(PlayerState[] players, NetworkedEntityState[] entityStates, PlayerInput[] playerInputs, int tick) {
 		timestamp = Utils.generateTimeStamp();
 		this.entityStates = entityStates;
 		this.players = players;
@@ -43,9 +43,13 @@ public class Snapshot {
 		this.tick = cpy.tick;
 		
 		if(cpy.entityStates != null){
-			this.entityStates = new AbstractEntityState[cpy.entityStates.length];
+			this.entityStates = new NetworkedEntityState[cpy.entityStates.length];
 			for(int i = 0; i < cpy.entityStates.length; i++){
-				this.entityStates[i] = cpy.entityStates[i].clone();
+				try {
+					this.entityStates[i] = (NetworkedEntityState)cpy.entityStates[i].clone();
+				} catch (CloneNotSupportedException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		
@@ -66,13 +70,13 @@ public class Snapshot {
 	
 	public int getTick(){ return tick; }
 	public long getTimestamp(){ return timestamp; }
-	public AbstractEntityState[] getEntityStates() { return entityStates; }
+	public NetworkedEntityState[] getEntityStates() { return entityStates; }
 
 	/*
 	 * NOTE: Efficiency can be increased by created a hashmap while iterating entityStates to associate id's with indices.
 	 * 		probably only worth it if we are expecting to have a lot of entities.
 	 */
-	public AbstractEntityState getEntityState(int id) {
+	public NetworkedEntityState getEntityState(int id) {
 		if(entityStates == null) return null;
 		for(int i = 0; i < entityStates.length; i++){
 			if(entityStates[i] == null) continue;

@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 import com.gearworks.eug.shared.Eug.NotImplementedException;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityNotRegisteredException;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 
 public class EntityManager {	
 	public static HashMap<Short, Class> registry = new HashMap<Short, Class>();
@@ -19,12 +19,17 @@ public class EntityManager {
 		registry.put(typeEnum, entityClass);
 	}
 	
-	//Instantiates an entity and adds it to the world.
-	public static NetworkedEntity Build(Player player, Short type, AbstractEntityState state) throws EntityNotRegisteredException, EntityBuildException{
+	//Instantiates an entity
+	public static NetworkedEntity Build(NetworkedEntityState state) throws EntityNotRegisteredException, EntityBuildException{
 		if(Eug.GetWorld().getEntities().size() >= SharedVars.MAX_ENTITIES)
 			throw new EntityBuildException("Cannot build new entity: Max entities reached.");
+		if(state.getId() == -1)
+			throw new EntityBuildException("Cannot build new entity: Invalid entity ID -1.");
+			
 		
 		NetworkedEntity ent = null;
+		Short type = state.getType();
+		
 		Class klass = registry.get(type);
 		
 		if(klass == null)
@@ -32,14 +37,14 @@ public class EntityManager {
 		
 		try {
 			Constructor ctor = klass.getConstructor(new Class[]{short.class});
-			ent = (NetworkedEntity)ctor.newInstance(Eug.GetWorld().nextEntityID());
-			ent.setOwner(player);
+			ent = (NetworkedEntity)ctor.newInstance(state.getId());
+			ent.setOwner(state.getPlayerId());
 			
 			if(state != null){
 				ent.snapToState(state);
 			}
 			
-			return Eug.GetWorld().spawn(ent);
+			return ent;
 		} catch (NoSuchMethodException e) {
 			throw new EntityBuildException("No valid constructor found for Entity of type " + type);
 		}catch(SecurityException e){
@@ -54,10 +59,6 @@ public class EntityManager {
 			e.getTargetException().printStackTrace();
 			throw new EntityBuildException(e.getMessage());
 		}		
-	}
-	
-	public static NetworkedEntity Build(Player player, Short type) throws EntityNotRegisteredException, EntityBuildException{
-		return Build(player, type, null);
 	}
 	
 	public static Short GetEntityType(NetworkedEntity ent){

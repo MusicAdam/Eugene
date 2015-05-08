@@ -15,7 +15,7 @@ public class ServerListener extends Listener {
 	public void connected(Connection connection)
 	{
 		ServerPlayer player = new ServerPlayer(connection.getID());
-		EugServer.QueueIdlePlayer(player);
+		EugServer.GetWorld().addPlayer(player);
 		
 		for(PlayerEventListener listener : Eug.GetPlayerEventListeners()){
 			listener.Connected(player);

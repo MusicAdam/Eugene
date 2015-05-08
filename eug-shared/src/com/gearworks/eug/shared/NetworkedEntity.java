@@ -1,7 +1,7 @@
 package com.gearworks.eug.shared;
 
 import com.gearworks.eug.shared.Eug.NotImplementedException;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 
 public class NetworkedEntity {	
 	public static final short NETWORKED_ENTITIY = 0x0000;
@@ -10,7 +10,7 @@ public class NetworkedEntity {
 	protected Player 		owner; //The player who owns this entity. Null if it is a world entity (no owner).
 	protected String 		spriteResource; //Name of the file from which the sprite's texture was loaded
 	private short 			type;
-	private AbstractEntityState snapToState; //Used to snap to a state from another thread.
+	private NetworkedEntityState snapToState; //Used to snap to a state from another thread.
 	
 	public NetworkedEntity(short id){
 		this.id = id;		
@@ -32,6 +32,10 @@ public class NetworkedEntity {
 		if(this.owner != null)
 			this.owner.addEntity(this);
 	}
+	
+	public void setOwner(int playerId){
+		setOwner(Eug.GetWorld().getPlayer(playerId));
+	}
 		
 	public void update(){		
 		if(snapToState != null){
@@ -45,14 +49,17 @@ public class NetworkedEntity {
 		setOwner(null);
 	}
 	
-	public AbstractEntityState getState() throws NotImplementedException{		
+	public NetworkedEntityState getState() throws NotImplementedException{		
 		throw Eug.Get().new NotImplementedException();	}
 	
-	public void snapToState(AbstractEntityState state){
+	public void snapToState(NetworkedEntityState state){
 		id = state.getId();
-		this.spriteResource = state.getSpriteResource();
 		
-		if(state.getPlayerId() != getOwner().getId()){
+		if(state.getPlayerId() == -1){
+			if(getOwner() != null){
+				getOwner().removeEntity(this);
+			}
+		}else if(state.getPlayerId() != getOwner().getId()){
 			Player newPlayer = Eug.GetWorld().getPlayer(state.getPlayerId());
 			
 			if(newPlayer != null){

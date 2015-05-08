@@ -32,7 +32,7 @@ import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.MessageRegistry;
 import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
 import com.gearworks.eug.shared.messages.UpdateMessage;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.state.StateManager;
 import com.gearworks.eug.shared.utils.Utils;
@@ -51,7 +51,7 @@ public class EugClient extends Eug {
 	protected Queue<NetworkedEntity> spawnQueue;
 	protected Queue<NetworkedEntity> destroyQueue;
 	protected MessageRegistry messageRegistry;
-	protected AbstractEntityState entityState;
+	protected NetworkedEntityState entityState;
 	protected Connection connection; //The player's connection to the server
 	protected Snapshot previousSnapshot;
 	protected Snapshot targetSnapshot;

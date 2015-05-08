@@ -7,7 +7,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.PlayerState;
 import com.gearworks.eug.shared.input.PlayerInput;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.Vector2;
 
@@ -26,8 +26,8 @@ public class MessageRegistry {
 		kryo.register(EntityCreatedMessage.class);
 		kryo.register(EntityDestroyedMessage.class);
 		kryo.register(UpdateMessage.class);
-		kryo.register(AbstractEntityState.class);
-		kryo.register(AbstractEntityState[].class);
+		kryo.register(NetworkedEntityState.class);
+		kryo.register(NetworkedEntityState[].class);
 		kryo.register(Snapshot.class);
 		kryo.register(float[].class);
 		kryo.register(short.class);

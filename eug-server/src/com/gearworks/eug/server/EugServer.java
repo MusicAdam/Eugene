@@ -150,11 +150,6 @@ public class EugServer extends Eug {
 		return ((EugServer)Eug.Get()).messageRegistry;
 	}
 	
-	public static void QueueIdlePlayer(ServerPlayer player){
-		((EugServer)Eug.Get()).players.add(player);
-	}
-
-	
 	public static ServerPlayer FindPlayerByConnection(Connection connection) {
 		for(Player pl : ((EugServer)Get()).players){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
 			if(pl.getConnection() == connection)

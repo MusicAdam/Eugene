@@ -15,7 +15,7 @@ import com.gearworks.eug.shared.exceptions.*;
 import com.gearworks.eug.shared.Eug.NotImplementedException;
 import com.gearworks.eug.shared.exceptions.EntityNotRegisteredException;
 import com.gearworks.eug.shared.input.PlayerInput;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 import com.gearworks.eug.shared.state.Snapshot;
 import com.gearworks.eug.shared.utils.CircularBuffer;
 import com.gearworks.eug.shared.utils.Utils;
@@ -160,7 +160,7 @@ public class World {
 	public void snapToSnapshot(Snapshot snapshot){
 		synchronizeSnapshot(snapshot);
 		
-		for(AbstractEntityState state : snapshot.getEntityStates()){
+		for(NetworkedEntityState state : snapshot.getEntityStates()){
 			NetworkedEntity ent = getEntity(state.getId());
 			ent.snapToState(state);
 		}		
@@ -222,13 +222,8 @@ public class World {
 		deletedEntityIds.removeAll(serverEntitySet);
 
 		for(Short id : newEntityIds){
-			AbstractEntityState state = snapshot.getEntityState(id);
-			try {
-				if(EntityManager.Build(getPlayer(state.getPlayerId()), state.getType(), state)==null)
-					throw new EntityBuildException("Unable to build entity, entity returned null");
-			} catch (EntityNotRegisteredException | EntityBuildException e) {
-				e.printStackTrace();
-			}
+			NetworkedEntityState state = snapshot.getEntityState(id);
+			spawn(state);
 		}
 		
 		for(Short id : deletedEntityIds){
@@ -258,7 +253,7 @@ public class World {
 			localPlayerSet.add(pl.getId());
 		
 		//Construct sets
-		for(AbstractEntityState entState : snapshot.getEntityStates())
+		for(NetworkedEntityState entState : snapshot.getEntityStates())
 			serverEntitySet.add(entState.getId());
 		for(NetworkedEntity ent : entityMap.values())
 			localEntitySet.add(ent.getId());
@@ -300,7 +295,6 @@ public class World {
 	public NetworkedEntity spawn(NetworkedEntity ent){
 		if(Eug.OnMainThread() || simulator){
 			synchronized(entitySpawnLock){
-				if(ent.getOwner().isValid()){
 					Debug.println("[" + name + ":spawn] entity " + ent.getId());		
 					entityMap.put(ent.getId(), ent);
 					lastEntityID = ent.getId();
@@ -310,16 +304,42 @@ public class World {
 					}
 					
 					return ent;
-				}else{
-					Debug.println("[" + name + ":spawn] [" + ent.getId() + "] Couldn't spawn entity as player [" + ent.getOwner().getId() + "] is invalid.", Debug.Reporting.Warning);
-				}
 			}
 		}else{
 			synchronized(entitySpawnLock){
 				entitySpawnQueue.add(ent);
 			}
 		}
+		return ent;
+	}
+	
+	public NetworkedEntity spawn(NetworkedEntityState state){
+		try {
+			NetworkedEntity ent = null;
+			if(state.getId() == -1)
+				state.setId(nextEntityID());
+			ent = EntityManager.Build(state);
+			return spawn(ent);
+		} catch (EntityNotRegisteredException e) {
+			e.printStackTrace();
+		} catch (EntityBuildException e) {
+			e.printStackTrace();
+		}
 		return null;
+	}
+	public NetworkedEntity spawn(short type, Player owner){
+		NetworkedEntityState state = new NetworkedEntityState();
+		state.setType(type);
+		state.setPlayerId(owner.getId());
+		state.setTimeStamp(Utils.generateTimeStamp());
+		return spawn(state);
+	}
+	public NetworkedEntity spawn(short type){
+		NetworkedEntityState state = new NetworkedEntityState();
+		state.setType(type);
+		state.setPlayerId(-1);
+		state.setTimeStamp(Utils.generateTimeStamp());
+		return spawn(state);
 	}
 	
 	public void destroy(NetworkedEntity ent){
@@ -342,6 +362,10 @@ public class World {
 				Debug.println("[" + name + ":destroy] Entity " + ent.getId() + " queued for deletion");
 			}
 		}
+	}
+	
+	public void destroy(short id){
+		destroy(getEntity(id));
 	}
 	
 	public Player addPlayer(Player pl){
@@ -414,8 +438,8 @@ public class World {
 		return new Snapshot(playerStates, getEntityStates(), inputsArray, getTick());
 	}
 	
-	public AbstractEntityState[] getEntityStates() {
-		AbstractEntityState[] states = new AbstractEntityState[entityMap.entrySet().size()];
+	public NetworkedEntityState[] getEntityStates() {
+		NetworkedEntityState[] states = new NetworkedEntityState[entityMap.entrySet().size()];
 		Iterator entIt = entityMap.entrySet().iterator();
 		int i = 0;
 		while(entIt.hasNext())

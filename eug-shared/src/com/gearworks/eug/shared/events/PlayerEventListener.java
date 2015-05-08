@@ -2,7 +2,7 @@ package com.gearworks.eug.shared.events;
 
 import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.Player;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 
 public class PlayerEventListener {
 	public void Connected(Player player){}

@@ -5,7 +5,6 @@ import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 
 import com.gearworks.eug.server.EugServer;
-import com.gearworks.eug.server.Instance;
 import com.gearworks.eug.shared.EntityManager;
 import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.NetworkedEntity;
@@ -119,20 +118,8 @@ public class Server {
 		
 		Eug.AddPlayerListener(new PlayerEventListener(){
 			@Override
-			public void Validated(Player player){
-				Instance playerInstance = EugServer.GetInstanceByID(player.getInstanceId());
-				if(playerInstance == null){
-					System.out.println("Instance " + player.getInstanceId() + " not found");
-					return;
-				}
-				
-				try {
-					EntityManager.Build(player, Entity.ENTITY, playerInstance.getWorld());
-				} catch (EntityNotRegisteredException e) {
-					e.printStackTrace();
-				} catch (EntityBuildException e) {
-					e.printStackTrace();
-				}
+			public void Connected(Player player){			
+				Eug.GetWorld().spawn(Entity.ENTITY, player);
 			}
 		});
 	}

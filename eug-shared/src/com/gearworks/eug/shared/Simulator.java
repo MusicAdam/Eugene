@@ -90,7 +90,7 @@ public class Simulator {
 	
 	//Runs a simulation with the given parameters
 	public Snapshot simulate(Snapshot snapshot, long toTime, CircularBuffer<Snapshot> history){
-		world = new World("Sim world", -1, true); //Initialize a world
+		world = new World("Sim world", true); //Initialize a world
 		
 		long simTime = snapshot.getTimestamp();
 		float step = SharedVars.STEP;

@@ -9,7 +9,7 @@ import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.NetworkedEntity;
 import com.gearworks.eug.shared.Eug.NotImplementedException;
 import com.gearworks.eug.shared.Player;
-import com.gearworks.eug.shared.state.AbstractEntityState;
+import com.gearworks.eug.shared.state.NetworkedEntityState;
 import com.gearworks.eug.shared.utils.Vector2;
 
 
@@ -26,10 +26,9 @@ public class Entity extends NetworkedEntity {
 		EntityManager.Register(ENTITY, Entity.class);
 	}
 	
-	public Entity(short id, Player player) {
-		super(id, player);
+	public Entity(short id) {
+		super(id);
 		position = new Vector2(0, 0);
-		font = new TrueTypeFont(new Font("Times New Roman", Font.PLAIN, 12), false);
 		
 	}
 	
@@ -44,8 +43,6 @@ public class Entity extends NetworkedEntity {
 		    GL11.glVertex2f(position.x + WIDTH,position.y+HEIGHT);
 		    GL11.glVertex2f(position.x, position.y+HEIGHT);
 		GL11.glEnd();
-		
-		font.drawString(position.x, position.y, "(" + position.x + ", " + position.y + ")");
 	}
 	
 	@Override
@@ -59,12 +56,12 @@ public class Entity extends NetworkedEntity {
 	public void setPosition(float x, float y){ setPosition(new Vector2(x, y)); }
 	
 	@Override
-	public AbstractEntityState getState() throws NotImplementedException{		
+	public NetworkedEntityState getState() throws NotImplementedException{		
 		return new EntityState(this);
 	}
 	
 	@Override
-	public void snapToState(AbstractEntityState state){
+	public void snapToState(NetworkedEntityState state){
 		super.snapToState(state);
 
 		EntityState entState = (EntityState)state;
