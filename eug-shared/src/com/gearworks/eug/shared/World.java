@@ -90,8 +90,10 @@ public class World {
 			//
 			//Process new entities
 			synchronized(entitySpawnLock){
-				while(!entitySpawnQueue.isEmpty())
+				while(!entitySpawnQueue.isEmpty()){
 					spawn(entitySpawnQueue.poll());
+					System.out.println("Spawned sumfin");
+				}
 			}
 			
 			//
@@ -294,19 +296,22 @@ public class World {
 	
 	public NetworkedEntity spawn(NetworkedEntity ent){
 		if(Eug.OnMainThread() || simulator){
+			System.out.println("should spawn..");
 			synchronized(entitySpawnLock){
-					Debug.println("[" + name + ":spawn] entity " + ent.getId());		
-					entityMap.put(ent.getId(), ent);
-					lastEntityID = ent.getId();
-					
-					for(EntityEventListener listener : entityEventListeners){
-						listener.onCreate(ent);
-					}
-					
-					return ent;
+				Debug.println("[" + name + ":spawn] entity " + ent.getId());		
+				entityMap.put(ent.getId(), ent);
+				lastEntityID = ent.getId();
+				
+				for(EntityEventListener listener : entityEventListeners){
+					listener.onCreate(ent);
+				}
+				
+				System.out.println("SPAWNED");
+				return ent;
 			}
 		}else{
 			synchronized(entitySpawnLock){
+				System.out.println("will spawn..");
 				entitySpawnQueue.add(ent);
 			}
 		}

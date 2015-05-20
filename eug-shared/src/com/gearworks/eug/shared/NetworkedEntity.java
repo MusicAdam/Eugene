@@ -55,25 +55,15 @@ public class NetworkedEntity {
 	public void snapToState(NetworkedEntityState state){
 		id = state.getId();
 		
-		if(state.getPlayerId() == -1){
-			if(getOwner() != null){
-				getOwner().removeEntity(this);
-			}
-		}else if(state.getPlayerId() != getOwner().getId()){
-			Player newPlayer = Eug.GetWorld().getPlayer(state.getPlayerId());
-			
-			if(newPlayer != null){
-				setOwner(newPlayer);
-			}
+		if(getOwner() == null && state.getPlayerId() != -1){
+			setOwner(state.getPlayerId());
+		}else if(getOwner() != null && state.getPlayerId() == -1){
+			setOwner(null);
 		}
 	}
 	
 	public void setId(short id){ this.id = id; }
 	public short getId(){ return id; }
-	public String getSpriteResource(){ return spriteResource; }
-	public void setSpriteResource(String resource){
-		this.spriteResource = resource;
-	}	
 	public short getType(){ return this.type; }
 	
 	public void render(){}

@@ -118,7 +118,7 @@ public class Server {
 		
 		Eug.AddPlayerListener(new PlayerEventListener(){
 			@Override
-			public void Connected(Player player){			
+			public void Connected(Player player){		
 				Eug.GetWorld().spawn(Entity.ENTITY, player);
 			}
 		});

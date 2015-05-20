@@ -19,6 +19,7 @@ import com.gearworks.eug.shared.World;
 import com.gearworks.eug.shared.messages.Message;
 import com.gearworks.eug.shared.messages.MessageRegistry;
 import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
+import com.gearworks.eug.shared.messages.UpdateMessage;
 import com.gearworks.eug.shared.state.StateManager;
 
 public class EugServer extends Eug {	
@@ -29,8 +30,6 @@ public class EugServer extends Eug {
 	private float accum;
 	private boolean isRunning;
 	protected StateManager sm;
-	protected ArrayList<Player> players;
-	protected HashMap<Short, NetworkedEntity> entityMap;
 	protected World world;
 	protected MessageRegistry messageRegistry;
 	protected Queue<QueuedMessageWrapper> messageQueue;
@@ -46,8 +45,6 @@ public class EugServer extends Eug {
 		 * Initialize networking infrastructure
 		 */
 		world = new World("ServerWorld");
-		players = new ArrayList<Player>();
-		entityMap = new HashMap<Short, NetworkedEntity>();
 		messageQueue = new ConcurrentLinkedQueue<QueuedMessageWrapper>();
 		messageRegistry = new MessageRegistry();
 		server = new Server(SharedVars.WRITE_BUFFER_SIZE, SharedVars.OBJECT_BUFFER_SIZE);
@@ -79,9 +76,12 @@ public class EugServer extends Eug {
 			
 			
 		//Process player updates	
-		for(Player pl : players){			
-			
+		for(Player pl : world.getPlayers()){		
+			UpdateMessage update = new UpdateMessage(world.getLatestSnapshot());
+			pl.getConnection().sendUDP(update);
 		}
+		
+		world.update(step);
 		
 		//Update state
 		sm.update();
@@ -143,7 +143,7 @@ public class EugServer extends Eug {
 
 	@Override
 	public Map<Short, NetworkedEntity> getEntities() {
-		return entityMap;
+		return world.getEntityMap();
 	}
 	
 	public static MessageRegistry GetMessageRegistry(){
@@ -151,7 +151,7 @@ public class EugServer extends Eug {
 	}
 	
 	public static ServerPlayer FindPlayerByConnection(Connection connection) {
-		for(Player pl : ((EugServer)Get()).players){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
+		for(Player pl : Eug.GetWorld().getPlayers()){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
 			if(pl.getConnection() == connection)
 				return (ServerPlayer)pl;
 		}		
@@ -183,7 +183,7 @@ public class EugServer extends Eug {
 	
 	@Override 
 	protected Player findPlayerById(int id){
-		for(Player pl : ((EugServer)Get()).players){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
+		for(Player pl : Eug.GetWorld().getPlayers()){//WARNING: Getting an iterator to ConcurrentQueue is not atomic
 			if(pl.getId() == id)
 				return pl;
 		}
@@ -193,16 +193,12 @@ public class EugServer extends Eug {
 	
 	@Override
 	protected ArrayList<Player> getPlayers(){
-		return players;
+		return Eug.GetWorld().getPlayers();
 	}
 	
 	@Override
 	public void dispose(){
-		for(Player pl : players){
-			pl.dispose();
-		}
-		players.clear();
-		players = null;
+		world.dispose();
 		
 		server.close();
 		server = null;

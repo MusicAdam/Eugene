@@ -33,8 +33,7 @@ public class Entity extends NetworkedEntity {
 	}
 	
 	@Override
-	public void render(){
-		
+	public void render(){		
 		GL11.glColor3f(1f,0,0f);
 		
 		GL11.glBegin(GL11.GL_QUADS);
@@ -48,6 +47,8 @@ public class Entity extends NetworkedEntity {
 	@Override
 	public void update(){
 		super.update();
+		
+		position.x += 1;
 	}
 	
 	
@@ -63,8 +64,10 @@ public class Entity extends NetworkedEntity {
 	@Override
 	public void snapToState(NetworkedEntityState state){
 		super.snapToState(state);
-
-		EntityState entState = (EntityState)state;
-		position = entState.position;
+		
+		if(state instanceof EntityState){
+			EntityState entState = (EntityState)state;
+			position = entState.position;
+		}
 	}
 }

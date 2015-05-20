@@ -37,9 +37,7 @@ public class GameState implements State {
 	public static float ROTATION_SMOOTHING_MINIMUM = .1f; //Minimum delta which will be smoothed
 	
 	private Simulator simulator;
-	private int initializeSceneMessageIndex = -1;
 	private int serverUpdateMessageIndex = -1;
-	private int playerInputMessageIndex = -1;
 	private EntityEventListener entityEventListener;
 	private int tick;
 	private Snapshot latestSnapshot;
@@ -63,6 +61,15 @@ public class GameState implements State {
 	public void onEnter() {
 		Debug.println("[GameState: onEnter()]");
 		startTime = Utils.generateTimeStamp();
+
+		final GameState thisRef = this; 
+		serverUpdateMessageIndex = 	
+				EugClient.GetMessageRegistry().listen(UpdateMessage.class, new MessageCallback(){
+					@Override
+					public void messageReceived(Connection c, Message msg){
+						thisRef.serverUpdate((UpdateMessage)msg);
+					}
+				});
 	}
 
 	@Override
@@ -75,12 +82,8 @@ public class GameState implements State {
 		//Cleanup all our callbacks/listeners
 		Eug.GetWorld().removeEntityListener(entityEventListener);
 		
-		if(initializeSceneMessageIndex != -1)
-			EugClient.GetMessageRegistry().remove(initializeSceneMessageIndex);
 		if(serverUpdateMessageIndex != -1)
 			EugClient.GetMessageRegistry().remove(serverUpdateMessageIndex);
-		if(playerInputMessageIndex != -1)
-			EugClient.GetMessageRegistry().remove(playerInputMessageIndex);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -89,43 +92,6 @@ public class GameState implements State {
 		frameStart = Utils.generateTimeStamp();
 		
 		Eug.GetWorld().update(SharedVars.STEP);
-
-		if(EugClient.GetPlayer().isValid()){ //Update entities			
-			//Initialize simulator if it hasn't been already
-			if(simulator == null){
-				simulator = new Simulator();
-			}		
-			
-			//Remove init scene message and registry update message if it still needs to be done.
-			if(initializeSceneMessageIndex != -1){
-				EugClient.GetMessageRegistry().remove(initializeSceneMessageIndex);
-				initializeSceneMessageIndex = -1;
-				
-				final GameState thisRef = this; 
-				serverUpdateMessageIndex = 	
-						EugClient.GetMessageRegistry().listen(UpdateMessage.class, new MessageCallback(){
-							@Override
-							public void messageReceived(Connection c, Message msg){
-								thisRef.serverUpdate((UpdateMessage)msg);
-							}
-						});
-				playerInputMessageIndex =
-						EugClient.GetMessageRegistry().listen(PlayerInput.class, new MessageCallback(){
-							@Override
-							public void messageReceived(Connection c, Message msg){
-								//System.out.println("PlayerInput response"); // Do nothing
-							}
-						});
-			}
-		}else if(EugClient.GetPlayer().isInstanceValid() && !EugClient.GetPlayer().isInitialized()){
-			final GameState thisRef = this; 
-			initializeSceneMessageIndex = EugClient.GetMessageRegistry().listen(InitializeSceneMessage.class, new MessageCallback(){
-				@Override
-				public void messageReceived(Connection c, Message msg){
-					thisRef.initializeScene(c, (InitializeSceneMessage)msg);
-				}
-			});
-		}
 		
 		frameTimeSum += (Utils.generateTimeStamp() - frameStart);
 	}
@@ -155,11 +121,9 @@ public class GameState implements State {
 	}
 	
 	protected void serverUpdate(UpdateMessage msg) {
-		if(!EugClient.GetPlayer().isValid()) return;
-		
 		Snapshot serverSnapshot = msg.getSnapshot();
 		
-		Eug.GetWorld().synchronizeSnapshot(serverSnapshot);
+		Eug.GetWorld().snapToSnapshot(serverSnapshot);
 		if(true)return ;
 		
 		//System.out.println("[serverUpdate] Server at tick " + serverSnapshot.getTick() + ", client at " + Eug.GetWorld().getTick());

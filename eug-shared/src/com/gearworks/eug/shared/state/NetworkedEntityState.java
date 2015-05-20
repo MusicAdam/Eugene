@@ -22,7 +22,7 @@ public class NetworkedEntityState implements Cloneable{
 	public NetworkedEntityState(NetworkedEntity ent) {		
 		this.timestamp = Utils.generateTimeStamp();
 		this.id = ent.getId();
-		this.playerId = ent.getOwner().getId();		
+		this.playerId = (ent.getOwner() == null) ? -1 : ent.getOwner().getId();		
 		this.type = ent.getType();	
 	}
 
