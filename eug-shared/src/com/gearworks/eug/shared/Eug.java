@@ -12,7 +12,13 @@ import com.gearworks.eug.shared.state.StateManager;
 /*
  * Provides a base class from which shared classes can call methods that should be implemented on both the client and server, but may be implemented differently
  */
-public class Eug {
+public class Eug {	
+	public static enum EndpointType{
+		Client, Server;
+	}
+	
+	public static EndpointType endpointType; 
+	
 	private static Eug singleton;
 	private static String mainThreadName; //This is the name of the thread that initialize is called on. Should be called by the user on the main thread.
 	
@@ -195,6 +201,10 @@ public class Eug {
 	}
 	
 	public static InputMapper GetInputMapper(){ return inputMapper; }
+	
+	public static boolean IsClient(){ return endpointType == EndpointType.Client; }
+	public static boolean IsServer(){ return endpointType == EndpointType.Server; }
+	
 	
 	public void create(){}
 	public void update(float step){}

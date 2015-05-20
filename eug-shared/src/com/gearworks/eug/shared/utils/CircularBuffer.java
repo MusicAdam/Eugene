@@ -22,9 +22,6 @@ public class CircularBuffer<T> {
 			
 			data[tail] = t;
 			tail = (tail + 1) % data.length;
-			//System.out.println("Push:" + t.toString());
-			//System.out.println(this);
-			//System.out.println();
 		}
 	}
 	
@@ -36,9 +33,6 @@ public class CircularBuffer<T> {
 			data[head] = null;
 			head = (head + 1) % data.length;
 			
-			//System.out.println("Pop:");
-			//System.out.println(this);
-			//System.out.println();
 			return t;
 		}
 	}

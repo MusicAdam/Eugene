@@ -96,94 +96,15 @@ public class GameState implements State {
 		frameTimeSum += (Utils.generateTimeStamp() - frameStart);
 	}
 	
-	protected void initializeScene(Connection c, InitializeSceneMessage msg) {
-		if(!EugClient.GetPlayer().isInstanceValid()) return;
-		if(EugClient.GetPlayer().isInitialized()){
-			//If for some reason we are still getting this message after we have been initialized and we are initialize, let the server know
-			InitializeSceneMessage ack = new InitializeSceneMessage(EugClient.GetPlayer().getInstanceId(), null);
-			EugClient.GetPlayer().getConnection().sendUDP(ack);
-			Debug.println("[GameState:initializeScene] Redundant Scene initialized response sent.");	
-			return;
-		}
-		EugClient.GetPlayer().setInitialized(true);
-		EugClient.GetWorld().setRecordHistory(true);
-		
-		Snapshot snapshot = msg.getSnapshot();		
-		//latestServerSnapshot = snapshot;
-		
-		Eug.GetWorld().snapToSnapshot(snapshot);
-		
-		InitializeSceneMessage ack = new InitializeSceneMessage(EugClient.GetPlayer().getInstanceId(), null);
-		ack.sendUDP(EugClient.GetPlayer().getConnection());
-		
-		Debug.println("[EugClient:initializeScene] Scene initialized and response sent.");
-		System.out.println("[EugClient:initializeScene] Server at tick " + snapshot.getTick() + ", client at " + Eug.GetWorld().getTick());
-	}
-	
 	protected void serverUpdate(UpdateMessage msg) {
 		Snapshot serverSnapshot = msg.getSnapshot();
 		
-		Eug.GetWorld().snapToSnapshot(serverSnapshot);
-		if(true)return ;
-		
-		//System.out.println("[serverUpdate] Server at tick " + serverSnapshot.getTick() + ", client at " + Eug.GetWorld().getTick());
-		
-		if(EugClient.GetPlayer().getInputs().size() > 0){
-			boolean shouldCorrect = false;
-			for(PlayerInput serverInput : serverSnapshot.getInput()){
-				Iterator<PlayerInput> iterator = EugClient.GetPlayer().getInputs().iterator();
-				
-				while(iterator.hasNext()){
-					PlayerInput clientInput = iterator.next();
-										
-					if(!clientInput.isSaved()){
-						iterator.remove();//If this input is not saved, don't wait for it and remove it
-					}else if(serverInput.getTimestamp() == clientInput.getTimestamp() &&
-							 serverInput.getTargetPlayerID() == clientInput.getTargetPlayerID()){ 
-						
-						clientInput.setCorrected(true);
-						iterator.remove();
-						
-						shouldCorrect = true;
-					}
-					
-					if(updatesSinceLastCorrection >= updatesUntilForceCorrection){
-						shouldCorrect = true;
-						iterator.remove();
-					}
-				}
-			}
-			
-			if(!shouldCorrect){
-				updatesSinceLastCorrection++;
-				System.out.println("[serverUpdate] waiting on correction ");
-				return; //Still waiting for corrected snapshot, dont want to interrupt our prediction with invalid server states.	
-			}
-		}		
-
-		updatesSinceLastCorrection = 0;
-				
-		Eug.GetWorld().pruneHistory(msg.getSnapshot().getTimestamp());
-		Snapshot localSnapshot =  	Eug.GetWorld().getHistory().peek();
-		
-		//Queue the server snapshot because we haven't completed a full frame since the last update
-		if(localSnapshot == null)
-			localSnapshot = Eug.GetWorld().getLatestSnapshot();
-		
-		
-		long stepMs = (long)(SharedVars.STEP * 1000);
-		
-		//Check if our history is within 1 step of the server. If it is not, we are out of sync
-		//and should snap to server
-		if(	Utils.timeCompareEpsilon(localSnapshot.getTimestamp(), serverSnapshot.getTimestamp(), stepMs)){
-			Eug.GetWorld().snapToSnapshot(serverSnapshot);
+		if(serverSnapshot == null){
+			System.out.println("Snapshot null");
 			return;
 		}
-						
-		if(!Snapshot.Compare(serverSnapshot, localSnapshot)){	//If the serverSnapshot and the localSnapshot don't match, calculate a corrected state
-			Snapshot result = simulator.simulate(serverSnapshot, Eug.GetWorld().getLatestSnapshot().getTimestamp(), Eug.GetWorld().getHistory());
-			Eug.GetWorld().snapToSnapshot(result);
-		}
+		
+		Eug.GetWorld().snapToSnapshot(serverSnapshot);
 	}
 	
 	public int getTick(){ return tick; }

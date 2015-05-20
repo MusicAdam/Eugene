@@ -38,11 +38,19 @@ public class ClientListener extends Listener {
 		long time = Utils.generateTimeStamp(); //Get timestamp as soon as the message is received
 		if(obj instanceof Message)
 		{
-			QueuedMessageWrapper w = new QueuedMessageWrapper();
-			w.connection = connection;
-			w.message = (Message)obj;
-			w.message.setReceivedTime(time);
-			EugClient.QueueMessage(w);
+			final Object fObj = obj;
+			final Connection fConn = connection;
+			new java.util.Timer().schedule(
+					new java.util.TimerTask(){
+						@Override
+						public void run(){
+							QueuedMessageWrapper w = new QueuedMessageWrapper();
+							w.connection = fConn;
+							w.message = (Message)fObj;
+							w.message.setReceivedTime(Utils.generateTimeStamp());
+							EugClient.QueueMessage(w);
+						}
+					}, 500);
 		}
 	}
 }

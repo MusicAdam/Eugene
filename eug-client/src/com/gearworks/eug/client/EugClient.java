@@ -21,6 +21,7 @@ import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.World;
+import com.gearworks.eug.shared.Eug.EndpointType;
 import com.gearworks.eug.shared.events.EntityEventListener;
 import com.gearworks.eug.shared.exceptions.EntityBuildException;
 import com.gearworks.eug.shared.exceptions.EntityUpdateException;
@@ -67,6 +68,7 @@ public class EugClient extends Eug {
 	
 	@Override
 	public void create () {	
+		endpointType = EndpointType.Client;
 		Eug.Initialize();
 		
 		/*

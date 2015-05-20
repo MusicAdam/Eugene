@@ -39,7 +39,6 @@ public class EntityManager {
 			Constructor ctor = klass.getConstructor(new Class[]{short.class});
 			ent = (NetworkedEntity)ctor.newInstance(state.getId());
 			ent.setOwner(state.getPlayerId());
-			
 			if(state != null){
 				ent.snapToState(state);
 			}

@@ -27,9 +27,11 @@ public class KeyResolver implements InputResolver {
 		}
 		
 		if(GLFW_KEY_W == input.getKey()){
+			System.out.println(pl.getEntities().size());
 			for(NetworkedEntity netEnt : pl.getEntities()){
 				Entity ent = (Entity)netEnt;
 				ent.setPosition(ent.getPosition().x, ent.getPosition().y + speed * step);
+				System.out.println("Resolve: " + input.getKey());
 			}
 		}
 		

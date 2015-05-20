@@ -25,7 +25,7 @@ public class World {
 	ArrayList<EntityEventListener>			entityEventListeners = new ArrayList<EntityEventListener>();
 	HashMap<Short, NetworkedEntity> 		entityMap = new HashMap<Short, NetworkedEntity>();
 	ArrayList<Player> 		 				players = new ArrayList<Player>();
-	CircularBuffer<Snapshot>				history;
+	HashMap<Integer, Snapshot>				history;
 	Snapshot 								latestSnapshot;
 	int										tick;
 	short									lastEntityID; //The last entity to be added to the world.
@@ -61,7 +61,7 @@ public class World {
 	
 	public World(String name, boolean sim){
 		if(!sim)
-			history = new CircularBuffer<Snapshot>(SharedVars.HISTORY_SIZE);
+			history = new HashMap<Integer, Snapshot>(SharedVars.HISTORY_SIZE);
 		this.name = name;
 		simulator = sim;
 		lastEntityID = -1;
@@ -107,22 +107,14 @@ public class World {
 			//
 			//Process player input
 			while(!inputQueue.isEmpty()){
-				final PlayerInput input = inputQueue.poll();
-				final Player pl = Eug.GetInputMapper().get(input.getEvent()).resolve(this, input, step);
-				pl.addInput(input);
-				
-				
-				new Thread(){
-					@Override
-					public void run(){
-						try {
-							Thread.sleep(90);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-						input.sendUDP(pl.getConnection());
-					}
-				}.start();
+				PlayerInput input = inputQueue.poll();
+				if(Eug.IsClient()){
+					Player pl = Eug.GetInputMapper().get(input.getEvent()).resolve(this, input, step);
+					pl.addInput(input);
+					input.sendUDP(pl.getConnection());
+				}else{ //Server should apply the input to the snapshot it happened in then simulate the current state, and set that to the current snapshot.
+					Eug.GetInputMapper().get(input.getEvent()).resolve(this, input, step);
+				}
 			}
 					
 			if(!simulator && recordHistory){
@@ -139,9 +131,11 @@ public class World {
 					}
 				}
 				
-				synchronized(historyLock){
-					history.push(generateSnapshot());
-					latestSnapshot = history.peekTail();
+				if(Eug.IsServer()){
+					synchronized(historyLock){
+						latestSnapshot = generateSnapshot();
+						history.put(tick, latestSnapshot);
+					}
 				}
 			}
 			
@@ -225,7 +219,7 @@ public class World {
 
 		for(Short id : newEntityIds){
 			NetworkedEntityState state = snapshot.getEntityState(id);
-			spawn(state);
+			NetworkedEntity ent = spawn(state);
 		}
 		
 		for(Short id : deletedEntityIds){
@@ -273,6 +267,7 @@ public class World {
 		return isSynchronized(snapshot, null, null, null, null);
 	}
 	
+	/*
 	public Snapshot findPastSnapshot(long time, long epsilon){
 		synchronized(historyLock){
 			if(history.isEmpty()) return null;
@@ -293,6 +288,7 @@ public class World {
 	public Snapshot findPastSnapshot(long time){
 		return findPastSnapshot(time, SharedVars.TIMESTAMP_EPSILON);
 	}
+	*/
 	
 	public NetworkedEntity spawn(NetworkedEntity ent){
 		if(Eug.OnMainThread() || simulator){
@@ -497,7 +493,7 @@ public class World {
 		return null;
 	}
 	
-	public CircularBuffer<Snapshot> getHistory(){ return history; }
+	public HashMap<Integer, Snapshot> getHistory(){ return history; }
 	
 	public Snapshot getLatestSnapshot(){ return latestSnapshot; }
 
@@ -526,6 +522,7 @@ public class World {
 	
 	public String getName(){ return name; }
 
+	/*
 	public void pruneHistory(int tick) {
 		while(!history.isEmpty() && history.peek().getTick() < tick)
 			history.pop();
@@ -534,7 +531,7 @@ public class World {
 	public void pruneHistory(long time) {
 		while(!history.isEmpty() && history.peek().getTimestamp() < time)
 			history.pop();
-	}
+	}*/
 	
 	public short nextEntityID()
 	{

@@ -47,8 +47,6 @@ public class Entity extends NetworkedEntity {
 	@Override
 	public void update(){
 		super.update();
-		
-		position.x += 1;
 	}
 	
 	

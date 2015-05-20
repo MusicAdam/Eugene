@@ -16,7 +16,9 @@ import com.gearworks.eug.shared.Eug;
 import com.gearworks.eug.shared.Player;
 import com.gearworks.eug.shared.SharedVars;
 import com.gearworks.eug.shared.World;
+import com.gearworks.eug.shared.input.PlayerInput;
 import com.gearworks.eug.shared.messages.Message;
+import com.gearworks.eug.shared.messages.MessageCallback;
 import com.gearworks.eug.shared.messages.MessageRegistry;
 import com.gearworks.eug.shared.messages.QueuedMessageWrapper;
 import com.gearworks.eug.shared.messages.UpdateMessage;
@@ -38,7 +40,8 @@ public class EugServer extends Eug {
 	 * Overrides
 	 */
 	@Override
-	public void create() {	
+	public void create() {
+		endpointType = EndpointType.Server;
 		Eug.Initialize();
 		
 		/*
@@ -58,11 +61,13 @@ public class EugServer extends Eug {
 			e.printStackTrace();
 		}
 		
-		/*
-		 * Initialize states		
-		 */
-		sm = new StateManager();
-		sm.setState(null); //Set initial state
+		messageRegistry.listen(PlayerInput.class, new MessageCallback(){
+			@Override
+			public void messageReceived(Connection c, Message m){
+				PlayerInput input = (PlayerInput)m;
+				world.queueInput(input);
+			}
+		});
 		
 		isRunning = true;
 	}
@@ -82,9 +87,6 @@ public class EugServer extends Eug {
 		}
 		
 		world.update(step);
-		
-		//Update state
-		sm.update();
 	}
 	
 	public void parseClientMessage(Connection c, Message message)

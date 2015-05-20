@@ -21,8 +21,8 @@ public class NetworkedEntity {
 		return owner;
 	}
 	
-	public void setOwner(Player player){
-		if(this.owner == player) return;
+	public Player setOwner(Player player){
+		if(this.owner == player) return player;
 		
 		if(this.owner != null)
 			this.owner.removeEntity(this);
@@ -31,10 +31,11 @@ public class NetworkedEntity {
 		
 		if(this.owner != null)
 			this.owner.addEntity(this);
+		return owner;
 	}
 	
-	public void setOwner(int playerId){
-		setOwner(Eug.GetWorld().getPlayer(playerId));
+	public Player setOwner(int playerId){
+		return setOwner(Eug.GetWorld().getPlayer(playerId));
 	}
 		
 	public void update(){		

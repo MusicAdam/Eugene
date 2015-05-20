@@ -96,9 +96,7 @@ public class Simulator {
 		float step = SharedVars.STEP;
 		
 		for(PlayerState state : snapshot.getPlayers()){
-			if(	state.isDisconnected() ||
-				!state.isInitialized() ||
-				!state.isInstanceValid())
+			if(	state.isDisconnected() )
 				continue;		
 		}
 		
